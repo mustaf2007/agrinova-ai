@@ -1,0 +1,45 @@
+name: AgriNova AI checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install application dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Compile application modules
+        run: python -m compileall -q app.py modules
+      - name: Smoke-test report exports
+        run: |
+          python - <<'PY'
+          from modules.reporting import build_farm_report_csv, build_farm_report_pdf
+
+          sample = {
+              "location": "Mogadishu, Somalia",
+              "crop": "Maize",
+              "variety": "Example cultivar",
+              "area_ha": 2,
+              "ecocrop_indicators": [("Optimal temperature range", "18 to 30 °C")],
+          }
+          csv_data = build_farm_report_csv(sample)
+          pdf_data = build_farm_report_pdf(sample)
+          assert csv_data.startswith(b"\xef\xbb\xbf")
+          assert b"Maize" in csv_data
+          assert pdf_data.startswith(b"%PDF-")
+          assert len(pdf_data) > 1000
+          print("PDF and CSV report exports passed.")
+          PY
