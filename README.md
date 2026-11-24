@@ -11,7 +11,7 @@ AgriNova AI is a Streamlit application combining accessible agricultural knowled
 - Crop planning and agronomic guidance
 - Symptom-based crop health screening
 - Soil indicator interpretation
-- Offline searchable agricultural knowledge using TF-IDF
+- Searchable curated agricultural knowledge using TF-IDF (no external AI API)
 - Data source and methodology catalog
 
 ## Run locally
@@ -26,19 +26,8 @@ Connect this public repository to [Streamlit Community Cloud](https://share.stre
 ## Important limitations
 This initial release does not automatically diagnose uploaded crop images. It provides symptom-based screening. Local crop recommendations require validation by qualified agronomists; soil interpretations are not laboratory results. Check source licenses and service terms before commercial reuse.
 
-## Sources
-- https://open-meteo.com/
-- https://power.larc.nasa.gov/
-- https://www.fao.org/faostat/
-- https://www.isric.org/explore/soilgrids
-- https://dataspace.copernicus.eu/
-- https://earthdata.nasa.gov/
-- https://plantvillage.psu.edu/
-- https://cgspace.cgiar.org/
-- https://data.humdata.org/
-- https://www.ipcinfo.org/
-
-See individual source terms and dataset licenses before redistribution.
+## Data sources
+Open-Meteo, NASA POWER, FAOSTAT, SoilGrids, Copernicus, NASA Earthdata, PlantVillage, CGIAR, HDX and IPC. Check individual dataset/service terms and licenses before redistribution or commercial use.
 
 ## License
 MIT. See `LICENSE`.
