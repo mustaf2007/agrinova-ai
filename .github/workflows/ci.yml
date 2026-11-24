@@ -32,7 +32,7 @@ jobs:
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
           from modules.crop_suitability import assess_crop_environment
           from modules.crop_suitability import normalize_spatial_observations, validate_geojson_boundaries
-          from modules.soilgrids_wcs import parse_wcs_coverages, get_coverage_request_params, fetch_nitrogen_geotiff
+          from modules.soilgrids_wcs import parse_wcs_coverages, get_coverage_request_params, fetch_nitrogen_geotiff, analyze_nitrogen_geotiff
           from unittest.mock import patch
           from types import SimpleNamespace
 
@@ -179,6 +179,42 @@ jobs:
                   [[2.0, 45.0], [2.05, 45.05]],
               )
           assert raster_bytes.startswith(b"II*\x00")
+          import numpy as np
+          import rasterio
+          from rasterio.transform import from_origin
+          from rasterio.io import MemoryFile
+          with MemoryFile() as test_memory:
+              with test_memory.open(
+                  driver="GTiff", height=4, width=4, count=1, dtype="int16",
+                  crs="EPSG:4326", transform=from_origin(45.0, 2.1, 0.025, 0.025),
+                  nodata=-9999,
+              ) as test_writer:
+                  test_writer.write(np.array([
+                      [1, 2, 3, 4],
+                      [5, 6, 7, 8],
+                      [9, 10, 11, 12],
+                      [13, 14, 15, 16],
+                  ], dtype="int16"), 1)
+              test_raster = test_memory.read()
+          test_polygon = {
+              "type": "FeatureCollection",
+              "features": [{
+                  "type": "Feature",
+                  "properties": {},
+                  "geometry": {
+                      "type": "Polygon",
+                      "coordinates": [[[45.0, 2.0], [45.075, 2.0], [45.075, 2.1], [45.0, 2.1], [45.0, 2.0]]],
+                  },
+              }],
+          }
+          raster_summary = analyze_nitrogen_geotiff(test_raster, test_polygon)
+          assert raster_summary["valid_pixel_count"] > 0
+          assert raster_summary["pixel_count_inside_polygon"] >= raster_summary["valid_pixel_count"]
+          assert 0 < raster_summary["valid_coverage_pct"] <= 100
+          assert raster_summary["minimum_cg_kg"] >= 1
+          assert raster_summary["maximum_cg_kg"] <= 16
+          assert raster_summary["median_cg_kg"] >= raster_summary["minimum_cg_kg"]
+          assert raster_summary["clipped_geotiff"].startswith(b"II*\\x00") or raster_summary["clipped_geotiff"].startswith(b"MM\\x00*")
           fake_error_response = SimpleNamespace(
               headers={"Content-Type": "text/xml"},
               raise_for_status=lambda: None,
