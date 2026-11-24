@@ -155,6 +155,10 @@ elif page=='Crop Planner':
  region = global_location_picker("planner", "Search and select the farm location (required)")
  map_point = st.session_state.get("planner_map_point")
  if region:
+  if st.session_state.get("planner_map_location") != region["label"]:
+   st.session_state.pop("planner_map_point", None)
+   st.session_state["planner_map_location"] = region["label"]
+   map_point = None
   st.subheader("Pin the farm on the map")
   st.caption("Click the farm's position on the map. The pin coordinates can be used for more localized weather data.")
   map_center = [map_point["latitude"], map_point["longitude"]] if map_point else [region["latitude"], region["longitude"]]
@@ -168,6 +172,7 @@ elif page=='Crop Planner':
    new_point = {"latitude": float(clicked["lat"]), "longitude": float(clicked["lng"])}
    if new_point != map_point:
     st.session_state["planner_map_point"] = new_point
+    st.session_state["planner_map_location"] = region["label"]
     st.rerun()
   if map_point:
    st.success(f"Farm pin selected: {map_point['latitude']:.5f}°, {map_point['longitude']:.5f}°")
