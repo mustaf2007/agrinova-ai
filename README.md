@@ -13,6 +13,7 @@ AgriNova AI is a Streamlit application designed for worldwide use. Its default e
 - Crop planning for any entered crop or plant, with required farm location and variety/cultivar
 - Location-specific live weather context in the crop planning profile
 - Recent approximately 90-day NASA POWER historical temperature and precipitation context in the crop planning profile, with valid-day coverage shown
+- Downloadable Global Farm Intelligence Report in PDF and CSV formats, combining farm details, forecast, recent historical climate and available ECOCROP species evidence
 - Interactive farm map pin selection and optional manual farm coordinates
 - FAO ECOCROP species-level ecological reference lookup (temperature, rainfall, soil pH, soil texture and crop-cycle fields where available)
 - Global crop-calendar evidence catalogue covering FAO Crop Calendar, AQUASTAT, GAEZ v5, FAO Hand-in-Hand and University of Minnesota GEMS, with the African World Bank/JRC-ASAP dataset retained as a regional source
