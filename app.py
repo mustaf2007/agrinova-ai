@@ -28,18 +28,58 @@ def crop_plant_picker(key, label="Crop or plant"):
   return custom.strip() or "Custom crop / plant"
  return selected
 
+def _country_flag(country_code):
+ code = (country_code or "").upper()
+ if len(code) != 2 or not code.isalpha():
+  return "🌍"
+ return "".join(chr(127397 + ord(char)) for char in code)
+
+def _location_type(feature_code):
+ code = (feature_code or "").upper()
+ if code == "PCLI" or code.startswith("PCL"):
+  return "Country"
+ if code.startswith("ADM1"):
+  return "State / province"
+ if code.startswith("ADM2"):
+  return "District / county"
+ if code.startswith("ADM"):
+  return "Administrative area"
+ if code.startswith("PPL"):
+  return "City / town / settlement"
+ return "Place"
+
 def global_location_picker(key, label="Search location worldwide"):
  query = st.text_input(label, placeholder="Enter a city, region or country (e.g. Nairobi, Punjab, Brazil)", key=f"{key}_global_search")
  if len(query.strip()) < 2:
-  st.caption("Global coverage is selected by default. Search any location to load local weather and climate information.")
+  st.caption("Worldwide search is available. Enter at least two characters to find and select a location.")
   return None
  matches = search_global_locations(query)
  if not matches:
   st.info("No matching locations found. Try a nearby city, a different spelling or a country name.")
   return None
- options = {item["label"]: item for item in matches}
+ st.caption(f"{len(matches)} matching location(s) found. Select the exact place to use its coordinates for local data.")
+ options = {}
+ for index, item in enumerate(matches):
+  flag = _country_flag(item.get("country_code"))
+  kind = _location_type(item.get("feature_code"))
+  display = f"{flag}  {item['label']}  ·  {kind}"
+  if display in options:
+   display = f"{display}  ({item['latitude']:.3f}, {item['longitude']:.3f})"
+  options[display] = item
  selected_label = st.selectbox("Matching locations", list(options), key=f"{key}_global_match")
- return options[selected_label]
+ selected = options[selected_label]
+ st.success(f"Selected location: {selected['label']}")
+ with st.expander("Location details"):
+  d1, d2, d3 = st.columns(3)
+  with d1:
+   st.write(f"**Type**  \n{_location_type(selected.get('feature_code'))}")
+  with d2:
+   st.write(f"**Country**  \n{selected.get('country') or 'Not available'}")
+  with d3:
+   population = selected.get("population")
+   st.write(f"**Population**  \n{f'{population:,}' if isinstance(population, (int, float)) else 'Not available'}")
+  st.caption(f"Coordinates: {selected['latitude']:.5f}°, {selected['longitude']:.5f}°")
+ return selected
 with st.sidebar:
  st.markdown('## 🌱 AgriNova AI'); st.caption('Agricultural Intelligence Platform'); st.divider()
  page=st.radio('WORKSPACE',['Overview','Crop Health Screening','Weather & Climate','Crop Planner','Soil Health','Agri Knowledge Assistant','Data Sources & Methodology'])
