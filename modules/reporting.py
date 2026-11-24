@@ -13,6 +13,11 @@ from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 
+def _pdf_safe(value):
+    """Keep standard PDF fonts from failing on unsupported Unicode characters."""
+    return str(value).encode("cp1252", errors="replace").decode("cp1252")
+
+
 def _rows(report):
     rows = [
         ("Report generated", report.get("report_date", date.today().isoformat())),
@@ -74,13 +79,13 @@ def build_farm_report_pdf(report):
     story = [
         Paragraph("AgriNova AI", title_style),
         Paragraph("Global Farm Intelligence Report", styles["Heading2"]),
-        Paragraph("Generated: " + escape(str(report.get("report_date", date.today().isoformat()))), subtitle_style),
+        Paragraph("Generated: " + escape(_pdf_safe(report.get("report_date", date.today().isoformat()))), subtitle_style),
     ]
     data = [[Paragraph("<b>Indicator</b>", styles["BodyText"]), Paragraph("<b>Value</b>", styles["BodyText"])]]
     for label, value in _rows(report):
         data.append([
-            Paragraph(escape(str(label)), styles["BodyText"]),
-            Paragraph(escape(str(value)), styles["BodyText"]),
+            Paragraph(escape(_pdf_safe(label)), styles["BodyText"]),
+            Paragraph(escape(_pdf_safe(value)), styles["BodyText"]),
         ])
     table = Table(data, colWidths=[68 * mm, 102 * mm], repeatRows=1, hAlign="LEFT")
     table.setStyle(TableStyle([
