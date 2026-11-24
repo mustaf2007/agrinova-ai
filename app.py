@@ -24,6 +24,41 @@ if 'theme' not in st.session_state: st.session_state.theme = 'Emerald'
 if 'cases' not in st.session_state: st.session_state.cases = []
 t = THEMES[st.session_state.theme]
 st.markdown(f'''<style>.stApp{{background:{t['bg']};color:{t['text']}}}[data-testid="stSidebar"]{{background:{t['panel']};border-right:1px solid {t['border']}}}[data-testid="stSidebar"] *{{color:{t['text']}}}.block-container{{max-width:1500px;padding-top:1.4rem}}h1,h2,h3,p,label{{color:{t['text']}}}.hero{{background:linear-gradient(120deg,{t['soft']},{t['panel']});border:1px solid {t['border']};padding:1.4rem;border-radius:18px;margin-bottom:1rem}}.metric-card{{background:{t['panel']};border:1px solid {t['border']};border-radius:14px;padding:1rem;min-height:105px}}.metric-label{{color:{t['muted']};font-size:.82rem}}.metric-value{{color:{t['text']};font-size:1.5rem;font-weight:700}}.stButton>button{{background:{t['accent']};color:white;border:0;border-radius:9px}}hr{{border-color:{t['border']}}}footer{{visibility:hidden}}</style>''',unsafe_allow_html=True)
+st.markdown(f'''<style>
+/* AgriNova visual system: responsive, theme-aware and dependency-free */
+:root{{--agri-accent:{t['accent']};--agri-soft:{t['soft']};--agri-panel:{t['panel']};--agri-border:{t['border']};--agri-text:{t['text']};--agri-muted:{t['muted']}}}
+html,body,[class*="css"]{{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}}
+.block-container{{padding-bottom:3rem}}
+[data-testid="stSidebar"]{{box-shadow:5px 0 24px rgba(20,50,35,.045)}}
+[data-testid="stSidebar"] [data-testid="stRadio"] label{{padding:.48rem .65rem;border-radius:10px;transition:background .18s ease}}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{{background:{t['soft']}}}
+[data-testid="stSidebar"] [data-testid="stRadio"] [aria-checked="true"]{{background:{t['soft']};font-weight:700}}
+.hero{{position:relative;overflow:hidden;background:linear-gradient(115deg,{t['soft']} 0%,{t['panel']} 58%,{t['soft']} 130%);border:1px solid {t['border']};border-radius:22px;padding:1.7rem 1.8rem;margin:.15rem 0 1.35rem;box-shadow:0 8px 26px rgba(25,60,40,.045)}}
+.hero:after{{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-55px;top:-85px;background:{t['accent']};opacity:.075;pointer-events:none}}
+.hero h1{{font-size:clamp(1.65rem,3vw,2.25rem);font-weight:800;letter-spacing:-.045em;margin:0 0 .35rem}}
+.hero p{{font-size:1rem;line-height:1.55;max-width:850px;margin:0;color:{t['muted']}}}
+.metric-card{{border-radius:17px;padding:1.05rem 1.1rem;box-shadow:0 5px 18px rgba(20,50,35,.045);transition:transform .18s ease,box-shadow .18s ease}}
+.metric-card:hover{{transform:translateY(-2px);box-shadow:0 10px 25px rgba(20,50,35,.09)}}
+.metric-label{{letter-spacing:.025em}}
+.metric-value{{font-size:clamp(1.25rem,2vw,1.65rem);letter-spacing:-.035em;margin:.28rem 0;overflow-wrap:anywhere}}
+h2{{font-weight:750;letter-spacing:-.025em;margin-top:1.25rem}}
+h3{{font-weight:700;letter-spacing:-.018em}}
+[data-testid="stVerticalBlock"] [data-testid="stExpander"]{{border:1px solid {t['border']};border-radius:13px;background:{t['panel']};overflow:hidden}}
+[data-testid="stExpander"] summary{{font-weight:650}}
+.stButton>button,[data-testid="stDownloadButton"] button,[data-testid="stFormSubmitButton"] button{{min-height:2.65rem;border-radius:11px;font-weight:650;letter-spacing:.005em;box-shadow:0 3px 9px rgba(20,60,40,.08);transition:filter .18s ease,transform .18s ease,box-shadow .18s ease}}
+.stButton>button:hover,[data-testid="stDownloadButton"] button:hover,[data-testid="stFormSubmitButton"] button:hover{{filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 6px 15px rgba(20,60,40,.13)}}
+[data-testid="stTextInput"] input,[data-testid="stNumberInput"] input,[data-testid="stTextArea"] textarea,[data-testid="stSelectbox"] [data-baseweb="select"]>div{{border-radius:10px}}
+[data-testid="stFileUploader"]{{border:1px dashed {t['accent']};border-radius:14px;background:{t['soft']};padding:.35rem}}
+[data-testid="stDataFrame"], [data-testid="stTable"]{{border:1px solid {t['border']};border-radius:12px;overflow:hidden}}
+[data-testid="stAlert"]{{border-radius:12px}}
+[data-testid="stPlotlyChart"]{{border:1px solid {t['border']};border-radius:15px;padding:.4rem;background:{t['panel']}}}
+[data-testid="stTabs"] button{{font-weight:650}}
+hr{{margin:1.35rem 0}}
+::selection{{background:{t['soft']};color:{t['text']}}}
+::-webkit-scrollbar{{width:9px;height:9px}}
+::-webkit-scrollbar-thumb{{background:{t['border']};border-radius:10px}}
+@media(max-width:768px){{.block-container{{padding-left:1rem;padding-right:1rem;padding-top:1rem}}.hero{{padding:1.25rem;border-radius:17px}}.metric-card{{min-height:90px;padding:.85rem}}}}
+</style>''',unsafe_allow_html=True)
 def metric(label,value,note=''):
  st.markdown(f'<div class="metric-card"><div class="metric-label">{label}</div><div class="metric-value">{value}</div><div class="metric-label">{note}</div></div>',unsafe_allow_html=True)
 
