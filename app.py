@@ -281,6 +281,11 @@ elif page=='Crop Planner':
       st.caption('ECOCROP does not provide an absolute soil pH range for this species record.')
    else:
     st.info('No confident ECOCROP species match was returned for this crop name, or the public dataset could not be reached. No ecological thresholds have been inferred.')
+   st.subheader('Crop calendar evidence')
+   st.markdown('**African crop calendar dataset (World Bank / JRC-ASAP)**')
+   st.write('A public 2019 dataset based on FAO crop calendars provides planting, growing and harvesting dekads for sorghum, millet, barley, maize and wheat at national and subnational levels for most African countries. The source includes only records that matched the ASAP satellite-derived phenology; it does not guarantee coverage for every crop or administrative area.')
+   st.markdown('[Open dataset and download CSV files](https://datacatalog.worldbank.org/search/dataset/0066842/crop-calendar-for-africa) · [View JRC-ASAP download documentation](https://agricultural-production-hotspots.ec.europa.eu/download.php)')
+   st.caption('The calendar dataset describes 2019 timing and uses 10-day dekads, not exact daily dates. AgriNova AI currently provides the source for inspection but does not yet claim an automatically verified match for this farm location and crop.')
    st.markdown('**Other authoritative references for future crop- and location-specific guidance:**')
    st.markdown('- [FAO Crop Calendar](https://cropcalendar.apps.fao.org/) — planting and harvesting periods by country and agroecological zone where records exist.')
    st.markdown('- [FAO ECOCROP / GAEZ](https://gaez.fao.org/pages/ecocrop) — broader crop ecological characteristics.')
