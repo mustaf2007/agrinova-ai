@@ -104,3 +104,89 @@ def normalize_spatial_observations(
     if output.empty:
         warnings.append("No valid coordinate records remain.")
     return output, warnings
+
+
+
+def validate_geojson_boundaries(data):
+    """Validate Polygon/MultiPolygon GeoJSON for boundary visualisation.
+
+    This validates coordinate structure and geographic bounds only. It does
+    not repair topology, verify ownership, or assess agricultural suitability.
+    """
+    import copy
+
+    if not isinstance(data, dict):
+        return None, ["GeoJSON must be a JSON object."], None
+    kind = data.get("type")
+    if kind == "FeatureCollection":
+        features = data.get("features")
+    elif kind == "Feature":
+        features = [data]
+    elif kind in {"Polygon", "MultiPolygon"}:
+        features = [{"type": "Feature", "properties": {}, "geometry": data}]
+    else:
+        return None, ["Provide a GeoJSON Feature, FeatureCollection, Polygon or MultiPolygon."], None
+    if not isinstance(features, list) or not features:
+        return None, ["The GeoJSON contains no features."], None
+
+    accepted = []
+    all_lons, all_lats = [], []
+    warnings = []
+
+    def validate_ring(ring):
+        if not isinstance(ring, list) or len(ring) < 4:
+            return False
+        points = []
+        for coordinate in ring:
+            if not isinstance(coordinate, (list, tuple)) or len(coordinate) < 2:
+                return False
+            try:
+                lon, lat = float(coordinate[0]), float(coordinate[1])
+            except (TypeError, ValueError):
+                return False
+            if not math.isfinite(lon) or not math.isfinite(lat):
+                return False
+            if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+                return False
+            points.append((lon, lat))
+        if points[0] != points[-1]:
+            return False
+        return points
+
+    for index, feature in enumerate(features):
+        geometry = feature.get("geometry") if isinstance(feature, dict) and feature.get("type") == "Feature" else None
+        if not isinstance(geometry, dict):
+            warnings.append(f"Feature {index + 1}: missing or invalid geometry; skipped.")
+            continue
+        geometry_type = geometry.get("type")
+        coordinates = geometry.get("coordinates")
+        polygons = [coordinates] if geometry_type == "Polygon" else coordinates if geometry_type == "MultiPolygon" else None
+        if not isinstance(polygons, list) or not polygons:
+            warnings.append(f"Feature {index + 1}: only Polygon and MultiPolygon geometries are supported; skipped.")
+            continue
+        feature_points = []
+        valid = True
+        for polygon in polygons:
+            if not isinstance(polygon, list) or not polygon:
+                valid = False
+                break
+            for ring in polygon:
+                points = validate_ring(ring)
+                if not points:
+                    valid = False
+                    break
+                feature_points.extend(points)
+            if not valid:
+                break
+        if not valid:
+            warnings.append(f"Feature {index + 1}: invalid ring, unclosed boundary, or out-of-range coordinate; skipped.")
+            continue
+        all_lons.extend(point[0] for point in feature_points)
+        all_lats.extend(point[1] for point in feature_points)
+        accepted.append(copy.deepcopy(feature))
+
+    if not accepted:
+        return None, warnings or ["No valid polygon boundaries were found."], None
+    output = {"type": "FeatureCollection", "features": accepted}
+    bounds = [[min(all_lats), min(all_lons)], [max(all_lats), max(all_lons)]]
+    return output, warnings, bounds
