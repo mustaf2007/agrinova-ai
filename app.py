@@ -211,7 +211,7 @@ if page=='Overview':
  else: st.info('Live forecast unavailable. Other modules remain usable.')
  st.info('Use the navigation to explore crop health screening, planning, soil indicators and agricultural knowledge.')
 elif page=='Crop Health Screening':
- st.markdown('st.markdown('<div class="hero"><div class="module-eyebrow">CROP HEALTH & FIELD OBSERVATION</div><h1>🩺 Crop Health Screening</h1><p>Screen observed symptoms and receive cautious next steps.</p></div>',unsafe_allow_html=True)
+ st.markdown('<div class="hero"><div class="module-eyebrow">CROP HEALTH & FIELD OBSERVATION</div><h1>🩺 Crop Health Screening</h1><p>Screen observed symptoms and receive cautious next steps.</p></div>',unsafe_allow_html=True)
  st.warning('This is symptom-based screening, not automated photo diagnosis. Confirm findings with an agricultural specialist before treatment.')
  location = global_location_picker("health", "Search farm location worldwide (optional)")
  with st.form('health'):
@@ -228,7 +228,7 @@ elif page=='Crop Health Screening':
   st.warning('Preliminary screening only. Several disorders have similar symptoms. Seek local confirmation before using pesticides.')
  if st.session_state.cases: st.subheader('Recent screening records'); st.dataframe(pd.DataFrame(st.session_state.cases),use_container_width=True)
 elif page=='Weather & Climate':
- st.markdown('st.markdown('<div class="hero"><div class="module-eyebrow">CLIMATE & WEATHER INTELLIGENCE</div><h1>🌦️ Weather & Climate</h1><p>Forecast and historical climate indicators from free data services.</p></div>',unsafe_allow_html=True)
+ st.markdown('<div class="hero"><div class="module-eyebrow">CLIMATE & WEATHER INTELLIGENCE</div><h1>🌦️ Weather & Climate</h1><p>Forecast and historical climate indicators from free data services.</p></div>',unsafe_allow_html=True)
  loc = global_location_picker("weather")
  w = get_weather(loc["latitude"], loc["longitude"]) if loc else None
  if st.button('Refresh data'): st.cache_data.clear(); st.rerun()
@@ -246,7 +246,7 @@ elif page=='Weather & Climate':
   else: st.info('Historical data not currently returned by NASA POWER.')
  else: st.info('Worldwide mode is active. Search a city, region or country above to load its forecast. If you already selected a location, check internet connectivity.')
 elif page=='Crop Planner':
- st.markdown('st.markdown('<div class="hero"><div class="module-eyebrow">CROP & FARM PLANNING</div><h1>🌾 Crop Planning</h1><p>Build a crop-specific planning record using the actual farm location and cultivar.</p></div>',unsafe_allow_html=True)
+ st.markdown('<div class="hero"><div class="module-eyebrow">CROP & FARM PLANNING</div><h1>🌾 Crop Planning</h1><p>Build a crop-specific planning record using the actual farm location and cultivar.</p></div>',unsafe_allow_html=True)
  st.info('Farm location and crop variety are required. Recommendations must be supported by crop- and location-specific evidence; unsupported values are not guessed.')
  region = global_location_picker("planner", "Search and select the farm location (required)")
  map_point = st.session_state.get("planner_map_point")
@@ -550,7 +550,7 @@ elif page=='Spatial Evidence Explorer':
  mapped_spatial = None
  valid_boundary = None
  boundary_bounds = None
- st.markdown('st.markdown('<div class="hero"><div class="module-eyebrow">GEOSPATIAL AGRICULTURAL EVIDENCE</div><h1>🗺️ Spatial Evidence Explorer</h1><p>Map farm or field observations and compare them with selected species-level ecological reference ranges.</p></div>',unsafe_allow_html=True)
+ st.markdown('<div class="hero"><div class="module-eyebrow">GEOSPATIAL AGRICULTURAL EVIDENCE</div><h1>🗺️ Spatial Evidence Explorer</h1><p>Map farm or field observations and compare them with selected species-level ecological reference ranges.</p></div>',unsafe_allow_html=True)
  st.warning('This workspace maps coordinates and measurements supplied in your file. It does not automatically download or sample GAEZ or SoilGrids raster cells. Do not treat the map as a validated crop-suitability classification.')
  crop_name = st.text_input('Crop or plant name for ECOCROP lookup', placeholder='e.g. maize, sorghum, sesame')
  eco_record = None
@@ -817,7 +817,7 @@ elif page=='Spatial Evidence Explorer':
  st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
  st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. A bounded nitrogen GeoTIFF can be downloaded, clipped to the exact uploaded GeoJSON polygon and summarized with valid-pixel counts, coverage percentage, mean, median, quartiles, minimum, maximum and standard deviation. Other SoilGrids properties are not yet implemented.')
 elif page=='Soil Health':
- st.markdown('st.markdown('<div class="hero"><div class="module-eyebrow">SOIL SCIENCE & FIELD MEASUREMENTS</div><h1>🧪 Soil Health</h1><p>Explore global modeled soil information and interpret your own laboratory measurements.</p></div>',unsafe_allow_html=True)
+ st.markdown('<div class="hero"><div class="module-eyebrow">SOIL SCIENCE & FIELD MEASUREMENTS</div><h1>🧪 Soil Health</h1><p>Explore global modeled soil information and interpret your own laboratory measurements.</p></div>',unsafe_allow_html=True)
  st.subheader('Global modeled soil information')
  st.caption('SoilGrids provides global 250 m soil-property predictions at six standard depth intervals. These are model estimates, not measurements taken on your farm.')
  soil_location = global_location_picker("soilgrids", "Search the farm location to explore SoilGrids (optional)")
@@ -931,7 +931,7 @@ elif page=='Soil Health':
   except (ValueError, OSError, ImportError, UnicodeDecodeError) as error:
    st.error(f'Could not read this soil dataset: {error}. Check the file format and try again.')
 elif page=='Agri Knowledge Assistant':
- st.markdown('st.markdown('<div class="hero"><div class="module-eyebrow">AGRONOMY & PLANT KNOWLEDGE</div><h1>📚 Agricultural Knowledge Assistant</h1><p>Ask about any plant, from vegetables and fruit trees to herbs and ornamentals. Search broad plant-care references and available crop-specific guidance locally; no external AI service or paid API key is required.</p></div>',unsafe_allow_html=True)
+ st.markdown('<div class="hero"><div class="module-eyebrow">AGRONOMY & PLANT KNOWLEDGE</div><h1>📚 Agricultural Knowledge Assistant</h1><p>Ask about any plant, from vegetables and fruit trees to herbs and ornamentals. Search broad plant-care references and available crop-specific guidance locally; no external AI service or paid API key is required.</p></div>',unsafe_allow_html=True)
  q=st.text_input('Ask an agricultural question', placeholder='e.g. eggplant care, dragon fruit watering, mango tree pests, sorghum, soil organic matter')
  category=st.selectbox('Topic',['All']+sorted({x['category'] for x in KNOWLEDGE}), key='knowledge_topic_filter')
  search_col, clear_col = st.columns([1, 1])
@@ -1011,7 +1011,7 @@ elif page=='Agri Knowledge Assistant':
    st.write(item['answer'])
    st.caption('Topic: '+item['category']+' · Source: '+item['source'])
 elif page=='Data Sources & Methodology':
- st.markdown('st.markdown('<div class="hero"><div class="module-eyebrow">DATA TRANSPARENCY & METHODS</div><h1>🗂️ Data Sources & Methodology</h1><p>Transparent source coverage, access notes and limitations.</p></div>',unsafe_allow_html=True)
+ st.markdown('<div class="hero"><div class="module-eyebrow">DATA TRANSPARENCY & METHODS</div><h1>🗂️ Data Sources & Methodology</h1><p>Transparent source coverage, access notes and limitations.</p></div>',unsafe_allow_html=True)
  st.dataframe(pd.DataFrame(DATA_SOURCES),use_container_width=True,hide_index=True,column_config={'URL':st.column_config.LinkColumn('Source website')})
  st.subheader('Interpretation rules')
  st.markdown('- Prefer Somalia-specific observed data when available.\n- Clearly label regional estimates and global modeled information.\n- Satellite observations are not ground observations.\n- Soil maps do not replace farm-level laboratory tests.\n- Check licenses and terms before commercial reuse.')
