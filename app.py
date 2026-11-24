@@ -281,21 +281,30 @@ elif page=='Crop Planner':
       st.caption('ECOCROP does not provide an absolute soil pH range for this species record.')
    else:
     st.info('No confident ECOCROP species match was returned for this crop name, or the public dataset could not be reached. No ecological thresholds have been inferred.')
-   st.subheader('Crop calendar evidence')
-   st.markdown('**African crop calendar dataset (World Bank / JRC-ASAP)**')
-   st.write('A public 2019 dataset based on FAO crop calendars provides planting, growing and harvesting dekads for sorghum, millet, barley, maize and wheat at national and subnational levels for most African countries. The source includes only records that matched the ASAP satellite-derived phenology; it does not guarantee coverage for every crop or administrative area.')
-   st.markdown('[Open dataset and download CSV files](https://datacatalog.worldbank.org/search/dataset/0066842/crop-calendar-for-africa) · [View JRC-ASAP download documentation](https://agricultural-production-hotspots.ec.europa.eu/download.php)')
-   st.caption('The calendar dataset describes 2019 timing and uses 10-day dekads, not exact daily dates. AgriNova AI does not treat it as a current-season forecast or a cultivar-specific recommendation.')
-   st.markdown('**Explore the source data (CSV upload)**')
-   st.write('Download the national or subnational CSV from the World Bank page above, then upload it here. Because source files can use different administrative labels, confirm the relevant columns before filtering.')
-   calendar_file = st.file_uploader('Upload World Bank / JRC-ASAP crop-calendar CSV', type=['csv'], key='planner_crop_calendar_csv')
+   st.subheader('Global crop calendar evidence')
+   st.write('AgriNova AI is designed for worldwide crop planning. Crop-calendar coverage differs by source, country, crop, irrigation system, agroecological zone and reference year. No single source provides complete, current calendars for every crop worldwide.')
+   st.markdown('**Global reference sources**')
+   st.markdown('- [FAO Crop Calendar](https://cropcalendar.apps.fao.org/) — searchable planting and harvesting guidance for more than 100 crops in more than 50 countries, organized by agroecological zone. Coverage is not universal.')
+   st.markdown('- [FAO AQUASTAT irrigated crop calendars](https://www.fao.org/aquastat/en/databases/crop-calendar/) — historical irrigated crop calendars; the underlying review covers 165 countries and around 60 irrigated crops, but availability and reliability vary by country and year.')
+   st.markdown('- [FAO / IIASA Global Agro-Ecological Zones (GAEZ)](https://gaez.fao.org/) — global spatial datasets including crop-calendar layers, agro-climatic growing periods and suitability information for up to 280 crops / land-use types. These are modeled spatial layers, not farm-specific observations.')
+   st.markdown('- [University of Minnesota GEMS global crop-calendar API](https://gems.umn.edu/apis/crop-calendar) — global gridded planting and harvest estimates for selected crops, with a circa-2007 reference period and research-use licensing conditions.')
+   st.markdown('- [World Bank / JRC-ASAP African crop calendar](https://datacatalog.worldbank.org/search/dataset/0066842/crop-calendar-for-africa) — optional Africa-only 2019 dataset for selected cereals, based on FAO calendars and satellite phenology.')
+   st.caption('Reference periods and methods differ. Historical or modeled calendar information must not be presented as a current-season forecast or a cultivar-specific recommendation.')
+   st.markdown('**Upload and explore a crop-calendar dataset**')
+   st.write('Upload a calendar file from one of the sources above, or another authoritative national agricultural source. Confirm its columns and time format below. The explorer can filter by country and crop when those fields are present.')
+   calendar_file = st.file_uploader('Upload crop-calendar data (CSV or Excel)', type=['csv','xlsx'], key='planner_global_crop_calendar_file')
    if calendar_file is not None:
     try:
-     calendar_df = pd.read_csv(calendar_file)
-     if calendar_df.empty:
-      st.warning('The uploaded CSV contains no data rows.')
+     if calendar_file.name.lower().endswith('.xlsx'):
+      excel_book = pd.ExcelFile(calendar_file)
+      sheet_name = st.selectbox('Select worksheet', excel_book.sheet_names, key='planner_calendar_sheet')
+      calendar_df = pd.read_excel(excel_book, sheet_name=sheet_name)
      else:
-      st.caption(f'Loaded {len(calendar_df):,} rows and {len(calendar_df.columns)} columns. Confirm the column mappings below; no field is assumed to be correct.')
+      calendar_df = pd.read_csv(calendar_file)
+     if calendar_df.empty:
+      st.warning('The uploaded file contains no data rows.')
+     else:
+      st.caption(f'Loaded {len(calendar_df):,} rows and {len(calendar_df.columns)} columns. Review the preview and confirm each mapping; no field is assumed to be correct.')
       st.dataframe(calendar_df.head(8), use_container_width=True, hide_index=True)
       calendar_cols = ['— Not available —'] + list(calendar_df.columns)
       def _calendar_guess(candidates):
@@ -306,23 +315,25 @@ elif page=='Crop Planner':
        return 0
       map1, map2 = st.columns(2)
       with map1:
-       country_col = st.selectbox('Country column', calendar_cols, index=_calendar_guess(['country','country_name','name_0','adm0_name']), key='calendar_country_col')
-       crop_col = st.selectbox('Crop column', calendar_cols, index=_calendar_guess(['crop','crop_name','crop_type','product']), key='calendar_crop_col')
-       admin_col = st.selectbox('Administrative-area column (optional)', calendar_cols, index=_calendar_guess(['adm1','adm1_name','name_1','admin1','region','province']), key='calendar_admin_col')
+       country_col = st.selectbox('Country column (optional)', calendar_cols, index=_calendar_guess(['country','country_name','name_0','adm0_name']), key='global_calendar_country_col')
+       crop_col = st.selectbox('Crop column (optional)', calendar_cols, index=_calendar_guess(['crop','crop_name','crop_type','product']), key='global_calendar_crop_col')
+       admin_col = st.selectbox('Administrative-area column (optional)', calendar_cols, index=_calendar_guess(['adm1','adm1_name','name_1','admin1','region','province']), key='global_calendar_admin_col')
       with map2:
-       plant_start_col = st.selectbox('Planting start dekad', calendar_cols, index=_calendar_guess(['sos_s','planting_start','plant_start']), key='calendar_plant_start')
-       plant_end_col = st.selectbox('Planting end dekad', calendar_cols, index=_calendar_guess(['sos_e','planting_end','plant_end']), key='calendar_plant_end')
-       growth_start_col = st.selectbox('Growth start dekad (optional)', calendar_cols, index=_calendar_guess(['sos_e','growth_start']), key='calendar_growth_start')
-       growth_end_col = st.selectbox('Growth end dekad (optional)', calendar_cols, index=_calendar_guess(['eos_s','growth_end']), key='calendar_growth_end')
-       harvest_start_col = st.selectbox('Harvest start dekad (optional)', calendar_cols, index=_calendar_guess(['eos_s','harvest_start']), key='calendar_harvest_start')
-       harvest_end_col = st.selectbox('Harvest end dekad (optional)', calendar_cols, index=_calendar_guess(['eos_e','harvest_end']), key='calendar_harvest_end')
-      if country_col != '— Not available —' and crop_col != '— Not available —':
+       plant_start_col = st.selectbox('Planting start field', calendar_cols, index=_calendar_guess(['sos_s','planting_start','plant_start','planting_month','sowing_month']), key='global_calendar_plant_start')
+       plant_end_col = st.selectbox('Planting end field (optional)', calendar_cols, index=_calendar_guess(['sos_e','planting_end','plant_end']), key='global_calendar_plant_end')
+       harvest_start_col = st.selectbox('Harvest start field (optional)', calendar_cols, index=_calendar_guess(['eos_s','harvest_start','harvest_month']), key='global_calendar_harvest_start')
+       harvest_end_col = st.selectbox('Harvest end field (optional)', calendar_cols, index=_calendar_guess(['eos_e','harvest_end']), key='global_calendar_harvest_end')
+      time_format = st.selectbox('Time-field format', ['10-day dekads (1–36)','Month numbers (1–12)','Keep source values as provided'], key='global_calendar_time_format')
+      if country_col != '— Not available —' or crop_col != '— Not available —':
        filtered_calendar = calendar_df.copy()
-       selected_country = str(region.get('country') or '').strip()
-       if selected_country:
+       selected_country = str(region.get('country') or '').strip() if region else ''
+       if country_col != '— Not available —' and selected_country:
         country_mask = filtered_calendar[country_col].astype(str).str.casefold().str.contains(selected_country.casefold(), na=False, regex=False)
         filtered_calendar = filtered_calendar[country_mask]
-       if admin_col != '— Not available —':
+       if crop_col != '— Not available —' and crop.strip():
+        crop_mask = filtered_calendar[crop_col].astype(str).str.casefold().str.contains(str(crop).casefold(), na=False, regex=False)
+        filtered_calendar = filtered_calendar[crop_mask]
+       if admin_col != '— Not available —' and region:
         area_terms = [str(region.get(k) or '').strip() for k in ['name','admin1','admin2']]
         area_terms = [term for term in area_terms if term and term.casefold() != selected_country.casefold()]
         if area_terms:
@@ -332,37 +343,48 @@ elif page=='Crop Planner':
          if area_mask.any():
           filtered_calendar = filtered_calendar[area_mask]
          else:
-          st.caption('No administrative-area text match was found. Showing country-level matches only; verify the source geography before using the records.')
-       crop_mask = filtered_calendar[crop_col].astype(str).str.casefold().str.contains(str(crop).casefold(), na=False, regex=False)
-       filtered_calendar = filtered_calendar[crop_mask]
+          st.caption('No administrative-area text match was found. The displayed results remain at the country or broader source level; verify geographic identifiers before relying on them.')
        if filtered_calendar.empty:
-        st.info('No rows matched the selected country and crop text. Check the source naming and column mappings; no planting dates have been inferred.')
+        st.info('No rows matched the selected country and crop text. Check the source naming and column mappings. No planting dates have been inferred.')
        else:
-        st.success(f'{len(filtered_calendar):,} matching calendar record(s) found in the uploaded file.')
-        def _dekad_label(value):
+        st.success(f'{len(filtered_calendar):,} matching record(s) found in the uploaded file.')
+        def _calendar_time_label(value):
          try:
           number = int(float(value))
-          if number < 1 or number > 36:
-           return 'Not a valid 1–36 dekad'
-          month = (number - 1) // 3
-          period = ['early','middle','late'][(number - 1) % 3]
-          return f'{period} {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][month]} (dekad {number})'
+          if time_format == '10-day dekads (1–36)':
+           if number < 1 or number > 36:
+            return 'Not a valid 1–36 dekad'
+           month = (number - 1) // 3
+           period = ['early','middle','late'][(number - 1) % 3]
+           return f'{period} {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][month]} (dekad {number})'
+          if time_format == 'Month numbers (1–12)':
+           if number < 1 or number > 12:
+            return 'Not a valid 1–12 month'
+           return ["January","February","March","April","May","June","July","August","September","October","November","December"][number-1]
+          return str(value)
          except (TypeError, ValueError):
-          return 'Not available / non-numeric'
+          return str(value) if pd.notna(value) else 'Not available'
         calendar_display = filtered_calendar.copy()
-        phase_columns = [('Planting start',plant_start_col),('Planting end',plant_end_col),('Growth start',growth_start_col),('Growth end',growth_end_col),('Harvest start',harvest_start_col),('Harvest end',harvest_end_col)]
+        phase_columns = [('Planting start',plant_start_col),('Planting end',plant_end_col),('Harvest start',harvest_start_col),('Harvest end',harvest_end_col)]
+        display_phase_cols = []
         for label, col in phase_columns:
          if col != '— Not available —':
-          calendar_display[label + ' (approx.)'] = calendar_display[col].map(_dekad_label)
-        display_cols = [country_col,crop_col] + ([admin_col] if admin_col != '— Not available —' else []) + [label + ' (approx.)' for label,col in phase_columns if col != '— Not available —']
+          display_name = label + (' (approx.)' if time_format != 'Keep source values as provided' else '')
+          calendar_display[display_name] = calendar_display[col].map(_calendar_time_label) if time_format != 'Keep source values as provided' else calendar_display[col]
+          display_phase_cols.append(display_name)
+        display_cols = ([country_col] if country_col != '— Not available —' else []) + ([admin_col] if admin_col != '— Not available —' else []) + ([crop_col] if crop_col != '— Not available —' else []) + display_phase_cols
         display_cols = list(dict.fromkeys(col for col in display_cols if col in calendar_display.columns))
-        st.dataframe(calendar_display[display_cols], use_container_width=True, hide_index=True)
-        st.caption('Dekads are approximate ten-day periods: 1–3 = January, 4–6 = February, …, 34–36 = December. These are source calendar periods, not exact dates or a current-season forecast. This display does not calculate crop duration.')
+        st.dataframe(calendar_display[display_cols] if display_cols else calendar_display, use_container_width=True, hide_index=True)
+        if time_format == '10-day dekads (1–36)':
+         st.caption('Dekads are approximate ten-day periods: 1–3 = January, 4–6 = February, …, 34–36 = December. These are source calendar periods, not exact dates.')
+        elif time_format == 'Month numbers (1–12)':
+         st.caption('Month labels are derived from numeric month values. Check the source metadata to confirm what each period represents.')
+        st.caption('Source records retain their original reference period and methodology. The explorer does not convert historical records into a current-season forecast.')
       else:
-       st.warning('Select both a country column and a crop column to filter the uploaded data.')
-    except (UnicodeDecodeError, pd.errors.ParserError, ValueError) as exc:
-     st.error(f'Could not read this CSV. Check that it is a valid comma-separated file. Details: {exc}')
-   st.markdown('**Other authoritative references for future crop- and location-specific guidance:**')
+       st.warning('Select at least a country column or crop column to enable filtering. You can still inspect the uploaded preview.')
+    except (UnicodeDecodeError, pd.errors.ParserError, ValueError, ImportError, OSError) as exc:
+     st.error(f'Could not read this file. Check that it is a valid CSV or Excel workbook. Details: {exc}')
+st.markdown('**Other authoritative references for future crop- and location-specific guidance:**')
    st.markdown('- [FAO Crop Calendar](https://cropcalendar.apps.fao.org/) — planting and harvesting periods by country and agroecological zone where records exist.')
    st.markdown('- [FAO ECOCROP / GAEZ](https://gaez.fao.org/pages/ecocrop) — broader crop ecological characteristics.')
    st.markdown('- [FAO AQUASTAT irrigated crop calendars](https://www.fao.org/aquastat/en/databases/crop-calendar/) — historical country-level irrigated crop calendar information where available.')
