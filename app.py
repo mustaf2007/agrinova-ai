@@ -6,6 +6,7 @@ from streamlit_folium import st_folium
 from modules.data_sources import get_weather, get_historical_climate, search_global_locations, search_ecocrop, DATA_SOURCES
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
+from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -481,6 +482,58 @@ elif page=='Soil Health':
    results=assess_soil(ph or None,organic or None,ec or None,n or None,p or None,k or None,crop)
    for label,desc in results: st.markdown(f'**{label}:** {desc}')
    st.warning('Interpretation depends on laboratory method, soil texture and regional calibration. SoilGrids modeled values are not substitutes for laboratory results. Use a recognized soil laboratory and local agronomic advice before fertilizer or amendment decisions.')
+ st.divider()
+ st.subheader('Import a soil laboratory dataset')
+ st.caption('Upload a CSV or Excel file containing soil-test results. You choose which columns represent each measurement. The importer preserves sample records, reports invalid values and does not fill missing measurements.')
+ uploaded_soil = st.file_uploader('Upload soil laboratory results', type=['csv', 'xlsx'], key='soil_lab_upload')
+ if uploaded_soil is not None:
+  try:
+   if uploaded_soil.name.lower().endswith('.csv'):
+    uploaded_soil.seek(0)
+    soil_workbook = None
+    soil_frame = pd.read_csv(uploaded_soil)
+    selected_sheet = None
+   else:
+    uploaded_soil.seek(0)
+    soil_workbook = pd.ExcelFile(uploaded_soil)
+    selected_sheet = st.selectbox('Excel worksheet', soil_workbook.sheet_names, key='soil_lab_sheet')
+    soil_frame = soil_workbook.parse(selected_sheet)
+   if soil_frame.empty:
+    st.warning('The selected file or worksheet contains no rows.')
+   else:
+    st.write(f'**Uploaded records:** {len(soil_frame):,} rows · **Columns:** {len(soil_frame.columns):,}')
+    st.dataframe(soil_frame.head(8), use_container_width=True, hide_index=True)
+    st.markdown('**Map the columns in your file**')
+    column_options = ['— Not mapped —'] + [str(column) for column in soil_frame.columns]
+    field_specs = {**OPTIONAL_FIELDS, **{key: value['label'] + ' (' + value['unit'] + ')' for key, value in MEASUREMENTS.items()}}
+    mapping = {}
+    map_fields = list(OPTIONAL_FIELDS) + list(MEASUREMENTS)
+    map_cols = st.columns(2)
+    for index, field in enumerate(map_fields):
+     with map_cols[index % 2]:
+      chosen = st.selectbox(field_specs[field], column_options, key=f'soil_map_{field}')
+      mapping[field] = None if chosen == '— Not mapped —' else chosen
+    if st.button('Validate and import soil results', key='soil_lab_validate'):
+     cleaned, validation = normalize_soil_lab_data(soil_frame, mapping)
+     if validation['errors']:
+      for message in validation['errors']: st.error(message)
+     elif cleaned.empty:
+      st.warning('No usable measurement records were found in the selected worksheet.')
+     else:
+      st.success(f"Imported {validation['rows_with_measurements']:,} record(s) containing at least one valid measurement.")
+      st.caption('The original worksheet is not modified. Rows without valid mapped measurements are excluded from the analysis table.')
+      for warning in validation['warnings']: st.warning(warning)
+      summary = soil_lab_summary(cleaned)
+      if not summary.empty:
+       st.markdown('**Descriptive summary of uploaded laboratory values**')
+       st.dataframe(summary, use_container_width=True, hide_index=True)
+      st.markdown('**Validated sample records**')
+      st.dataframe(cleaned, use_container_width=True, hide_index=True)
+      csv_export = cleaned.to_csv(index=False).encode('utf-8-sig')
+      st.download_button('Download validated soil dataset (CSV)', data=csv_export, file_name='agrinova_validated_soil_results.csv', mime='text/csv', key='soil_lab_download')
+      st.caption('Summary statistics describe only the uploaded samples. They are not regional soil classifications, crop-specific thresholds or fertilizer recommendations.')
+  except (ValueError, OSError, ImportError, UnicodeDecodeError) as error:
+   st.error(f'Could not read this soil dataset: {error}. Check the file format and try again.')
 elif page=='Agri Knowledge Assistant':
  st.markdown('<div class="hero"><h1>📚 Agricultural Knowledge Assistant</h1><p>Search curated agricultural knowledge locally using TF-IDF text similarity.</p></div>',unsafe_allow_html=True)
  q=st.text_input('Ask an agricultural question'); category=st.selectbox('Topic',['All']+sorted({x['category'] for x in KNOWLEDGE}))
