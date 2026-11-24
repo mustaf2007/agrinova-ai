@@ -32,7 +32,9 @@ jobs:
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
           from modules.crop_suitability import assess_crop_environment
           from modules.crop_suitability import normalize_spatial_observations, validate_geojson_boundaries
-          from modules.soilgrids_wcs import parse_wcs_coverages
+          from modules.soilgrids_wcs import parse_wcs_coverages, get_coverage_request_params, fetch_nitrogen_geotiff
+          from unittest.mock import patch
+          from types import SimpleNamespace
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -141,5 +143,48 @@ jobs:
               raise AssertionError("Capabilities without identifiers should be rejected.")
           except ValueError:
               pass
+          wcs_params = get_coverage_request_params(
+              "nitrogen_0-5cm_Q0.5",
+              [[2.0, 45.0], [2.05, 45.05]],
+          )
+          assert ("REQUEST", "GetCoverage") in wcs_params
+          assert ("COVERAGEID", "nitrogen_0-5cm_Q0.5") in wcs_params
+          assert len([item for item in wcs_params if item[0] == "SUBSET"]) == 2
+          assert any(item[0] == "SUBSETTINGCRS" for item in wcs_params)
+          try:
+              get_coverage_request_params("soc_0-5cm_Q0.5", [[2.0, 45.0], [2.05, 45.05]])
+              raise AssertionError("Non-nitrogen coverage should be rejected.")
+          except ValueError:
+              pass
+          try:
+              get_coverage_request_params("nitrogen_0-5cm_Q0.5", [[2.0, 45.0], [2.3, 45.05]])
+              raise AssertionError("Oversized extent should be rejected.")
+          except ValueError:
+              pass
+          fake_tiff_response = SimpleNamespace(
+              headers={"Content-Type": "image/tiff"},
+              raise_for_status=lambda: None,
+              iter_content=lambda chunk_size: [b"II*\\x00test-raster"],
+          )
+          with patch("modules.soilgrids_wcs.requests.get", return_value=fake_tiff_response):
+              raster_bytes = fetch_nitrogen_geotiff(
+                  "nitrogen_0-5cm_Q0.5",
+                  [[2.0, 45.0], [2.05, 45.05]],
+              )
+          assert raster_bytes.startswith(b"II*\\x00")
+          fake_error_response = SimpleNamespace(
+              headers={"Content-Type": "text/xml"},
+              raise_for_status=lambda: None,
+              iter_content=lambda chunk_size: [b"<ExceptionReport/>"],
+          )
+          with patch("modules.soilgrids_wcs.requests.get", return_value=fake_error_response):
+              try:
+                  fetch_nitrogen_geotiff(
+                      "nitrogen_0-5cm_Q0.5",
+                      [[2.0, 45.0], [2.05, 45.05]],
+                  )
+                  raise AssertionError("OGC exception XML should not be accepted as a raster.")
+              except ValueError:
+                  pass
           print("PDF/CSV exports, soil missingness and lab-import checks passed.")
           PY
