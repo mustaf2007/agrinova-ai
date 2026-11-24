@@ -146,6 +146,11 @@ def load_ecocrop_database():
     except (requests.RequestException, ValueError, ImportError, OSError, KeyError):
         return None
 
+def normalize_ecocrop_name(value):
+    """Normalize common plant-name spacing and punctuation for name matching."""
+    return "".join(character for character in str(value or "").casefold() if character.isalnum())
+
+
 def _ecocrop_text(value):
     if value is None:
         return ""
@@ -158,7 +163,7 @@ def _ecocrop_text(value):
 @st.cache_data(ttl=86400, show_spinner=False)
 def search_ecocrop(crop_name: str, limit: int = 12):
     """Find species-level ECOCROP records by scientific, common or synonym name."""
-    query = (crop_name or "").strip().casefold()
+    query = normalize_ecocrop_name(crop_name)
     if len(query) < 2:
         return []
     frame = load_ecocrop_database()
@@ -169,10 +174,11 @@ def search_ecocrop(crop_name: str, limit: int = 12):
         scientific = _ecocrop_text(row.get("scientificname"))
         common = _ecocrop_text(row.get("comname"))
         synonyms = _ecocrop_text(row.get("syno"))
-        terms = [scientific.casefold()] + [part.strip().casefold() for part in common.split(",")] + [part.strip().casefold() for part in synonyms.split(",")]
-        if query in terms:
+        terms = [scientific] + [part.strip() for part in common.split(",")] + [part.strip() for part in synonyms.split(",")]
+        normalized_terms = [normalize_ecocrop_name(term) for term in terms if term]
+        if query in normalized_terms:
             score = 0
-        elif any(query in term for term in terms if term):
+        elif any(query in term or term in query for term in normalized_terms if term and len(term) >= 3):
             score = 1
         else:
             continue
