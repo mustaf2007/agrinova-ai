@@ -27,7 +27,7 @@ jobs:
         run: |
           python - <<'PY'
           from modules.reporting import build_farm_report_csv, build_farm_report_pdf
-          from modules.agronomy import assess_soil
+          from modules.agronomy import assess_soil, search_knowledge, KNOWLEDGE
           import pandas as pd
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
           from modules.crop_suitability import assess_crop_environment
@@ -54,6 +54,18 @@ jobs:
           assert b"2026-11-10" in csv_data
           assert pdf_data.startswith(b"%PDF-")
           assert len(pdf_data) > 1000
+          sorghum_results = search_knowledge("about sorghum")
+          assert sorghum_results
+          assert any("Sorghum" in item["title"] for item in sorghum_results)
+          assert all("answer" in item and "source" in item for item in sorghum_results)
+          sorghum_topic_results = search_knowledge("sorghum", "Crop-specific guidance")
+          assert sorghum_topic_results
+          assert all(item["category"] == "Crop-specific guidance" for item in sorghum_topic_results)
+          assert search_knowledge("fall armyworm", "Water management") == []
+          assert search_knowledge("") == []
+          assert search_knowledge("about") == []
+          assert len(search_knowledge("maize", limit=1)) <= 1
+          assert len(KNOWLEDGE) >= 19
           soil_missing = assess_soil(None, None, None, None, None, None, "Maize")
           assert len(soil_missing) == 1
           assert soil_missing[0][0] == "Crop context"
