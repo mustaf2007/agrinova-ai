@@ -670,7 +670,7 @@ elif page=='Spatial Evidence Explorer':
    else:
     st.info('Upload and validate a GeoJSON farm boundary before requesting a raster subset.')
  st.markdown(f"[Open official SoilGrids WCS documentation]({SOILGRIDS_WCS_DOCS}) · [Open nitrogen WCS endpoint]({SOILGRIDS_NITROGEN_WCS})")
- st.caption('The SoilGrids REST point-query API remains separate from WCS. The integration can request a bounded nitrogen GeoTIFF for the uploaded boundary's bounding rectangle. It does not clip the raster to the exact polygon, sample pixels or calculate farm-level statistics.')
+ st.caption("The SoilGrids REST point-query API remains separate from WCS. The integration can request a bounded nitrogen GeoTIFF for the uploaded boundary's bounding rectangle. It does not clip the raster to the exact polygon, sample pixels or calculate farm-level statistics.")
  st.markdown('**Preparing source data**')
  st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
  st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. A bounded nitrogen GeoTIFF can be downloaded for a validated GeoJSON boundary extent. Exact polygon clipping, raster pixel interpretation, zonal statistics and other SoilGrids properties are not yet implemented.')
