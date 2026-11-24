@@ -1,4 +1,5 @@
 import streamlit as st
+import json
 import pandas as pd
 import plotly.express as px
 import folium
@@ -7,7 +8,7 @@ from modules.data_sources import get_weather, get_historical_climate, search_glo
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
 from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
-from modules.crop_suitability import assess_crop_environment, normalize_spatial_observations
+from modules.crop_suitability import assess_crop_environment, normalize_spatial_observations, validate_geojson_boundaries
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -545,6 +546,54 @@ elif page=='Spatial Evidence Explorer':
      st.info('Select valid latitude and longitude columns to validate and map records.')
   except (ValueError, OSError, ImportError, UnicodeDecodeError, pd.errors.ParserError) as error:
    st.error(f'Could not read the uploaded geospatial file: {error}. Check the CSV or Excel format.')
+ st.divider()
+ st.markdown('**Farm and field boundary upload (GeoJSON)**')
+ st.caption('Upload a GeoJSON polygon or multipolygon to outline a farm or field. Coordinates are validated and displayed; no area, ownership or suitability is inferred.')
+ boundary_file = st.file_uploader('Upload farm boundary (.geojson or .json)', type=['geojson','json'], key='spatial_boundary_file')
+ if boundary_file is not None:
+  try:
+   boundary_file.seek(0)
+   boundary_data = json.load(boundary_file)
+   valid_boundary, boundary_warnings, boundary_bounds = validate_geojson_boundaries(boundary_data)
+   for warning in boundary_warnings:
+    st.warning(warning)
+   if valid_boundary is not None:
+    boundary_count = len(valid_boundary['features'])
+    st.success(f'Validated {boundary_count:,} polygon feature(s).')
+    boundary_map = folium.Map(
+     location=[
+      (boundary_bounds[0][0] + boundary_bounds[1][0]) / 2,
+      (boundary_bounds[0][1] + boundary_bounds[1][1]) / 2,
+     ],
+     zoom_start=12,
+     control_scale=True,
+    )
+    folium.GeoJson(
+     valid_boundary,
+     name='Uploaded farm boundaries',
+     style_function=lambda feature: {
+      'color': '#16845B',
+      'weight': 3,
+      'fillColor': '#53C58B',
+      'fillOpacity': 0.18,
+     },
+     tooltip=folium.GeoJsonTooltip(
+      fields=list(valid_boundary['features'][0].get('properties', {}).keys())[:5]
+     ) if valid_boundary['features'][0].get('properties') else None,
+    ).add_to(boundary_map)
+    boundary_map.fit_bounds(boundary_bounds)
+    st.subheader('Uploaded farm boundary map')
+    st_folium(boundary_map, height=520, width=1200, key='spatial_boundary_map')
+    st.download_button(
+     'Download validated GeoJSON',
+     data=json.dumps(valid_boundary, ensure_ascii=False, indent=2).encode('utf-8'),
+     file_name='agrinova_validated_farm_boundaries.geojson',
+     mime='application/geo+json',
+     key='spatial_boundary_download',
+    )
+    st.caption('Boundary geometry is shown as supplied after basic structural and coordinate checks. Complex polygon topology is not repaired or independently verified.')
+  except (ValueError, OSError, UnicodeDecodeError) as error:
+   st.error(f'Could not read the GeoJSON boundary file: {error}. Check that it is valid UTF-8 GeoJSON.')
  st.markdown('**Preparing source data**')
  st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
  st.caption('This first spatial workflow accepts point observations in CSV or Excel. Direct raster ingestion, automatic GAEZ/SoilGrids sampling and polygon-based farm boundaries are not yet implemented.')
