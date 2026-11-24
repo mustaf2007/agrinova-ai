@@ -9,6 +9,7 @@ from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
 from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
 from modules.crop_suitability import assess_crop_environment, normalize_spatial_observations, validate_geojson_boundaries
+from modules.soilgrids_wcs import fetch_nitrogen_coverages, SOILGRIDS_NITROGEN_WCS, SOILGRIDS_WCS_DOCS
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -615,6 +616,28 @@ elif page=='Spatial Evidence Explorer':
     st.caption('Boundary geometry is shown as supplied after basic structural and coordinate checks. Complex polygon topology is not repaired or independently verified.')
   except (ValueError, OSError, UnicodeDecodeError) as error:
    st.error(f'Could not read the GeoJSON boundary file: {error}. Check that it is valid UTF-8 GeoJSON.')
+ st.divider()
+ st.markdown('**SoilGrids WCS coverage discovery (nitrogen)**')
+ st.caption('Check the official ISRIC Web Coverage Service metadata and inspect the coverage identifiers currently advertised for the nitrogen layer. This reads service metadata only; no raster pixels or farm measurements are downloaded.')
+ if st.button('Check live SoilGrids WCS coverages', key='check_soilgrids_wcs'):
+  try:
+   with st.spinner('Requesting official ISRIC WCS capabilities...'):
+    st.session_state['soilgrids_wcs_coverages'] = fetch_nitrogen_coverages()
+    st.session_state['soilgrids_wcs_error'] = None
+  except Exception as error:
+   st.session_state['soilgrids_wcs_coverages'] = None
+   st.session_state['soilgrids_wcs_error'] = str(error)
+ if st.session_state.get('soilgrids_wcs_coverages'):
+  coverage_ids = st.session_state['soilgrids_wcs_coverages']
+  st.success(f'ISRIC advertised {len(coverage_ids)} coverage identifier(s) in the latest successful check.')
+  st.dataframe(pd.DataFrame({'WCS coverage identifier': coverage_ids}), use_container_width=True, hide_index=True)
+  st.caption('Coverage identifiers are service metadata, not soil values. Each coverage represents a modeled nitrogen layer; depth interval and quantile are encoded in the identifier.')
+ elif st.session_state.get('soilgrids_wcs_error'):
+  st.warning(f"Live WCS metadata could not be retrieved: {st.session_state['soilgrids_wcs_error']}. The service may be temporarily unavailable; use the official documentation and map links below.")
+ else:
+  st.info('Run the check to retrieve current coverage metadata from ISRIC. Availability is not assumed.')
+ st.markdown(f"[Open official SoilGrids WCS documentation]({SOILGRIDS_WCS_DOCS}) · [Open nitrogen WCS endpoint]({SOILGRIDS_NITROGEN_WCS})")
+ st.caption('The SoilGrids REST point-query API remains separate from WCS. This first integration discovers the nitrogen service only; it does not yet request GetCoverage GeoTIFFs, sample pixels or calculate farm-level statistics.')
  st.markdown('**Preparing source data**')
  st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
  st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. Direct raster ingestion and automatic GAEZ / SoilGrids sampling are not yet implemented.')
