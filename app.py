@@ -48,6 +48,9 @@ def _location_type(feature_code):
   return "City / town / settlement"
  return "Place"
 
+def _is_country_location(location):
+ return (location or {}).get("feature_code", "").upper() in {"PCLI", "PCL"}
+
 def global_location_picker(key, label="Search location worldwide"):
  query = st.text_input(label, placeholder="Enter a city, region or country (e.g. Nairobi, Punjab, Brazil)", key=f"{key}_global_search")
  if len(query.strip()) < 2:
@@ -79,6 +82,10 @@ def global_location_picker(key, label="Search location worldwide"):
    population = selected.get("population")
    st.write(f"**Population**  \n{f'{population:,}' if isinstance(population, (int, float)) else 'Not available'}")
   st.caption(f"Coordinates: {selected['latitude']:.5f}°, {selected['longitude']:.5f}°")
+ if _is_country_location(selected):
+  st.warning("Country-level reference point: these coordinates are not a farm location and may not represent national weather conditions. Select a city, district or region for more localized results.")
+ else:
+  st.caption("This is a subnational location match. It is more localized than a country reference point, but may still differ from conditions at the exact farm.")
  return selected
 with st.sidebar:
  st.markdown('## 🌱 AgriNova AI'); st.caption('Agricultural Intelligence Platform'); st.divider()
@@ -98,6 +105,8 @@ if page=='Overview':
  with x4: metric('7-day rainfall',f"{w['rain_7d']} mm" if w else 'Select location','Forecast total')
  st.subheader('Weather outlook')
  if w and w['daily']:
+  if _is_country_location(location):
+   st.warning("These forecast values use a country-level reference coordinate. Do not interpret them as representative of the entire country.")
   df=pd.DataFrame(w['daily']); st.plotly_chart(px.bar(df,x='date',y='precipitation',labels={'date':'Date','precipitation':'Rainfall (mm)'}),use_container_width=True)
  elif not location:
   st.info('AgriNova AI is in worldwide mode. Search for any location above to view its local weather and climate indicators.')
@@ -126,6 +135,8 @@ elif page=='Weather & Climate':
  w = get_weather(loc["latitude"], loc["longitude"]) if loc else None
  if st.button('Refresh data'): st.cache_data.clear(); st.rerun()
  if w:
+  if _is_country_location(loc):
+   st.warning("Country-level reference coordinates are being used. For locally meaningful weather and climate analysis, select a city, district or region.")
   a,b,c,d=st.columns(4)
   with a: metric('Temperature',f"{w['current_temp']} °C")
   with b: metric('Humidity',f"{w['humidity']}%")
@@ -154,6 +165,8 @@ elif page=='Crop Planner':
  if submitted:
   if not region:
    st.error('Search for and select the actual farm location before generating the planning profile.')
+  elif _is_country_location(region):
+   st.error('A country-level reference point is too broad for farm planning. Search again and select the farm city, town, district or region.')
   elif not crop.strip() or crop == 'Custom crop / plant':
    st.error('Enter a specific crop or plant name.')
   elif not variety.strip():
