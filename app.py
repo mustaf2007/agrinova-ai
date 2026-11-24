@@ -6,7 +6,7 @@ from streamlit_folium import st_folium
 from modules.data_sources import get_weather, get_historical_climate, search_global_locations, search_ecocrop, DATA_SOURCES
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
-from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary
+from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -532,6 +532,32 @@ elif page=='Soil Health':
       csv_export = cleaned.to_csv(index=False).encode('utf-8-sig')
       st.download_button('Download validated soil dataset (CSV)', data=csv_export, file_name='agrinova_validated_soil_results.csv', mime='text/csv', key='soil_lab_download')
       st.caption('Summary statistics describe only the uploaded samples. They are not regional soil classifications, crop-specific thresholds or fertilizer recommendations.')
+      comparison_fields = [field for field in OPTIONAL_FIELDS if field in cleaned and cleaned[field].notna().nunique() > 1]
+      if comparison_fields:
+       st.markdown('**Compare samples by location, depth, date or sample group**')
+       group_by = st.selectbox('Group samples by', comparison_fields, key='soil_lab_group_by')
+       grouped_summary = soil_lab_group_summary(cleaned, group_by)
+       if not grouped_summary.empty:
+        st.dataframe(grouped_summary, use_container_width=True, hide_index=True)
+        st.caption('Grouped medians and sample counts are descriptive summaries. Differences may reflect sampling design, laboratory methods or soil variability.')
+      chart_fields = [field for field in MEASUREMENTS if field in cleaned and cleaned[field].notna().sum() > 1]
+      if chart_fields:
+       st.markdown('**Measurement distributions**')
+       for field in chart_fields:
+        values = cleaned.loc[cleaned[field].notna(), field]
+        st.markdown(f"**{MEASUREMENTS[field]['label']} ({MEASUREMENTS[field]['unit']})**")
+        if 'depth_cm' in cleaned and cleaned['depth_cm'].notna().nunique() > 1:
+         chart_data = cleaned.loc[cleaned[field].notna() & cleaned['depth_cm'].notna()]
+         if not chart_data.empty:
+          fig = px.scatter(chart_data, x='depth_cm', y=field, color='location' if 'location' in chart_data and chart_data['location'].nunique() > 1 else None, hover_data=['sample_id'] if 'sample_id' in chart_data else None, labels={'depth_cm':'Sampling depth (cm)',field:MEASUREMENTS[field]['label']})
+          fig.update_xaxes(autorange='reversed')
+          st.plotly_chart(fig, use_container_width=True)
+        elif 'location' in cleaned and cleaned['location'].notna().nunique() > 1:
+         chart_data = cleaned.loc[cleaned[field].notna() & cleaned['location'].notna()]
+         fig = px.box(chart_data, x='location', y=field, points='all', labels={'location':'Sample location',field:MEASUREMENTS[field]['label']})
+         st.plotly_chart(fig, use_container_width=True)
+        else:
+         st.plotly_chart(px.histogram(values, nbins=20, labels={'value':MEASUREMENTS[field]['unit']}, title='Distribution across uploaded samples'), use_container_width=True)
   except (ValueError, OSError, ImportError, UnicodeDecodeError) as error:
    st.error(f'Could not read this soil dataset: {error}. Check the file format and try again.')
 elif page=='Agri Knowledge Assistant':
