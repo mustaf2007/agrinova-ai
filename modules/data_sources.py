@@ -82,3 +82,25 @@ def get_historical_climate(latitude: float, longitude: float):
         return pd.DataFrame(rows) if rows else None
     except (requests.RequestException, ValueError, KeyError, TypeError):
         return None
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def search_global_locations(query: str, count: int = 10):
+    """Search cities, regions and countries worldwide using Open-Meteo Geocoding."""
+    query = (query or "").strip()
+    if len(query) < 2:
+        return []
+    url = "https://geocoding-api.open-meteo.com/v1/search"
+    try:
+        response = requests.get(url, params={"name": query, "count": count, "language": "en", "format": "json"}, timeout=TIMEOUT)
+        response.raise_for_status()
+        results = response.json().get("results", [])
+        locations = []
+        for item in results:
+            if item.get("latitude") is None or item.get("longitude") is None:
+                continue
+            parts = [item.get("name"), item.get("admin1"), item.get("country")]
+            label = ", ".join(dict.fromkeys(str(part) for part in parts if part))
+            locations.append({"label": label, "name": item.get("name", "Unknown"), "country": item.get("country", ""), "latitude": float(item["latitude"]), "longitude": float(item["longitude"])})
+        return locations
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return []
