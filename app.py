@@ -538,7 +538,7 @@ elif page=='Spatial Evidence Explorer':
         popup=folium.Popup('<br>'.join(details), max_width=320),
        ).add_to(spatial_map)
       st.subheader('Mapped observation points')
-      st_folium(spatial_map, height=520, use_container_width=True, key='spatial_evidence_map')
+      st_folium(spatial_map, height=520, width=1200, key='spatial_evidence_map')
       st.caption('Map markers show supplied observation coordinates only. Marker color does not indicate suitability, risk or crop performance.')
       st.download_button('Download validated spatial observations (CSV)', data=mapped_spatial.to_csv(index=False).encode('utf-8-sig'), file_name='agrinova_validated_spatial_observations.csv', mime='text/csv', key='spatial_observations_download')
     else:
