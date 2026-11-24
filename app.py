@@ -173,10 +173,10 @@ if page=='Overview':
  st.markdown("""
  <section class="agri-hero">
    <div class="agri-hero-copy">
-     <div class="agri-eyebrow">🌾 GLOBAL AGRICULTURAL INTELLIGENCE</div>
-     <h1>Grow with better<br><span>agricultural insight.</span></h1>
-     <p>Bring crop health, climate, soil and spatial evidence together to support smarter, more resilient farming decisions.</p>
-     <div class="agri-tags"><span>🌱 Crop intelligence</span><span>🌦️ Climate insights</span><span>🧪 Soil evidence</span></div>
+     <div class="agri-eyebrow">🌾 AGRICULTURAL INTELLIGENCE &amp; DECISION SUPPORT</div>
+     <h1>Evidence for better<br><span>agricultural decisions.</span></h1>
+     <p>Explore crop health, weather and climate, soil information, spatial observations and agronomic knowledge in one workspace—bringing key evidence together to support informed crop planning and farm decisions.</p>
+     <div class="agri-tags"><span>🌱 Crop health &amp; planning</span><span>🌦️ Weather &amp; climate</span><span>🧪 Soil &amp; spatial evidence</span></div>
    </div>
    <div class="agri-hero-art" aria-hidden="true">
      <div class="agri-sun"></div><div class="agri-field field-back"></div><div class="agri-field field-mid"></div><div class="agri-field field-front"></div>
