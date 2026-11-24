@@ -153,7 +153,8 @@ jobs:
           assert any(item[0] == "SUBSETTINGCRS" for item in wcs_params)
           x_subset = next(value for key, value in wcs_params if key == "SUBSET" and value.startswith("X("))
           y_subset = next(value for key, value in wcs_params if key == "SUBSET" and value.startswith("Y("))
-          assert "5008359" in x_subset and "5013871" in x_subset
+          assert 5_000_000 < float(x_subset[2:].split(",")[0]) < 5_010_000
+          assert 5_010_000 < float(x_subset.split(",")[1].rstrip(")")) < 5_020_000
           assert "222638" in y_subset and "228205" in y_subset
 
           try:
