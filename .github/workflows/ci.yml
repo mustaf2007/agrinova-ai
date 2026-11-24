@@ -31,7 +31,7 @@ jobs:
           import pandas as pd
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
           from modules.crop_suitability import assess_crop_environment
-          from modules.crop_suitability import normalize_spatial_observations
+          from modules.crop_suitability import normalize_spatial_observations, validate_geojson_boundaries
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -91,5 +91,30 @@ jobs:
           assert len(spatial_clean) == 1
           assert spatial_clean.loc[0, "latitude"] == 2.04
           assert len(spatial_warnings) == 1
+          polygon = {
+              "type": "Feature",
+              "properties": {"farm": "Test plot"},
+              "geometry": {"type": "Polygon", "coordinates": [[[45.0, 2.0], [45.1, 2.0], [45.1, 2.1], [45.0, 2.0]]]},
+          }
+          boundary, boundary_warnings, boundary_bounds = validate_geojson_boundaries(polygon)
+          assert boundary is not None
+          assert len(boundary["features"]) == 1
+          assert boundary_bounds == [[2.0, 45.0], [2.1, 45.1]]
+          assert not boundary_warnings
+          invalid_polygon = {
+              "type": "Polygon",
+              "coordinates": [[[45.0, 2.0], [45.1, 2.0], [45.1, 2.1], [45.0, 2.1]]],
+          }
+          rejected, rejected_warnings, rejected_bounds = validate_geojson_boundaries(invalid_polygon)
+          assert rejected is None
+          assert rejected_warnings
+          assert rejected_bounds is None
+          mixed = {
+              "type": "FeatureCollection",
+              "features": [polygon, {"type": "Feature", "properties": {}, "geometry": {"type": "Point", "coordinates": [45, 2]}}],
+          }
+          partial, partial_warnings, _ = validate_geojson_boundaries(mixed)
+          assert partial is not None and len(partial["features"]) == 1
+          assert len(partial_warnings) == 1
           print("PDF/CSV exports, soil missingness and lab-import checks passed.")
           PY
