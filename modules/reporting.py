@@ -48,8 +48,31 @@ def _rows(report):
 def build_farm_report_csv(report):
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Indicator", "Value"])
-    writer.writerows(_rows(report))
+    writer.writerow(["Section", "Date", "Indicator", "Value", "Unit", "Source"])
+    for label, value in _rows(report):
+        writer.writerow(["Farm profile and evidence", "", label, value, "", "AgriNova AI / cited source in report"])
+    for item in report.get("forecast_daily", []):
+        writer.writerow([
+            "7-day weather forecast", item.get("date", ""),
+            "Maximum temperature", item.get("temp_max", ""), "°C", "Open-Meteo",
+        ])
+        writer.writerow([
+            "7-day weather forecast", item.get("date", ""),
+            "Minimum temperature", item.get("temp_min", ""), "°C", "Open-Meteo",
+        ])
+        writer.writerow([
+            "7-day weather forecast", item.get("date", ""),
+            "Precipitation", item.get("precipitation", ""), "mm/day", "Open-Meteo",
+        ])
+    for item in report.get("historical_daily", []):
+        writer.writerow([
+            "Historical daily climate", item.get("date", ""),
+            "Mean temperature", item.get("temperature_c", ""), "°C", "NASA POWER",
+        ])
+        writer.writerow([
+            "Historical daily climate", item.get("date", ""),
+            "Corrected precipitation", item.get("precipitation_mm_day", ""), "mm/day", "NASA POWER",
+        ])
     return output.getvalue().encode("utf-8-sig")
 
 
