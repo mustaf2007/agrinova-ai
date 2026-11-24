@@ -446,17 +446,41 @@ elif page=='Crop Planner':
   with dl2:
    st.download_button('Download CSV data', data=build_farm_report_csv(report_data), file_name='agrinova_farm_intelligence_report.csv', mime='text/csv', use_container_width=True)
 elif page=='Soil Health':
- st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Interpret soil measurements supplied by the user.</p></div>',unsafe_allow_html=True)
- st.info('Use laboratory or field-test results. The app does not invent missing measurements or fertilizer rates.')
+ st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Explore global modeled soil information and interpret your own laboratory measurements.</p></div>',unsafe_allow_html=True)
+ st.subheader('Global modeled soil information')
+ st.caption('SoilGrids provides global 250 m soil-property predictions at six standard depth intervals. These are model estimates, not measurements taken on your farm.')
+ soil_location = global_location_picker("soilgrids", "Search the farm location to explore SoilGrids (optional)")
+ if soil_location:
+  st.write(f"**Selected reference point:** {soil_location['label']}")
+  st.write(f"**Coordinates:** {soil_location['latitude']:.5f}°, {soil_location['longitude']:.5f}°")
+  st.markdown("[Open the SoilGrids global map](https://soilgrids.org/) and use the coordinates above to inspect the selected area.")
+ st.warning('The ISRIC SoilGrids REST point-query API is currently temporarily paused by its provider. AgriNova AI therefore does not display or invent SoilGrids point values. Use the official map or WMS/WCS services for visual exploration and data access.')
+ st.markdown('[SoilGrids map](https://soilgrids.org/) · [Official data access guidance](https://docs.isric.org/globaldata/soilgrids/index.html) · [ISRIC WMS/WCS services](https://maps.isric.org/)')
+ st.caption('Available modeled properties include pH, soil organic carbon, bulk density, coarse fragments, sand, silt, clay, cation-exchange capacity and total nitrogen. Standard depths: 0–5, 5–15, 15–30, 30–60, 60–100 and 100–200 cm. Published map resolution is 250 m; predictions include a 90% uncertainty interval. Source: ISRIC SoilGrids, CC BY 4.0.')
+ st.divider()
+ st.subheader('Interpret your soil test results')
+ st.info('Enter only values from a soil laboratory or field test. For every numeric field, enter 0 if the measurement is not available; missing values will be excluded from the interpretation.')
  with st.form('soil'):
   a,b,c=st.columns(3)
-  with a: ph=st.number_input('Soil pH',0.,14.,6.5,.1); organic=st.number_input('Organic matter (%)',0.,100.,1.5,.1)
-  with b: ec=st.number_input('Electrical conductivity (dS/m)',0.,100.,.5,.1); n=st.number_input('Nitrogen (mg/kg)',0.,value=20.)
-  with c: p=st.number_input('Available phosphorus (mg/kg)',0.,value=10.); k=st.number_input('Available potassium (mg/kg)',0.,value=100.)
-  crop=crop_plant_picker('soil', 'Crop or plant'); submit=st.form_submit_button('Assess soil indicators')
+  with a:
+   ph=st.number_input('Soil pH (0 = not tested)',0.,14.,0.0,.1)
+   organic=st.number_input('Organic matter (%) (0 = not tested)',0.,100.,0.0,.1)
+  with b:
+   ec=st.number_input('Electrical conductivity (dS/m) (0 = not tested)',0.,100.,0.0,.1)
+   n=st.number_input('Nitrogen (mg/kg) (0 = not tested)',0.,value=0.)
+  with c:
+   p=st.number_input('Available phosphorus (mg/kg) (0 = not tested)',0.,value=0.)
+   k=st.number_input('Available potassium (mg/kg) (0 = not tested)',0.,value=0.)
+  crop=crop_plant_picker('soil', 'Crop or plant')
+  submit=st.form_submit_button('Assess measured soil indicators')
  if submit:
-  for label,desc in assess_soil(ph,organic,ec,n,p,k,crop): st.markdown(f'**{label}:** {desc}')
-  st.warning('Interpretation depends on laboratory method, soil texture and regional calibration. Use a recognized soil laboratory for fertilizer decisions.')
+  measured = any(value > 0 for value in (ph, organic, ec, n, p, k))
+  if not measured:
+   st.info('No soil measurements were entered. Add at least one tested value to receive an interpretation.')
+  else:
+   results=assess_soil(ph or None,organic or None,ec or None,n or None,p or None,k or None,crop)
+   for label,desc in results: st.markdown(f'**{label}:** {desc}')
+   st.warning('Interpretation depends on laboratory method, soil texture and regional calibration. SoilGrids modeled values are not substitutes for laboratory results. Use a recognized soil laboratory and local agronomic advice before fertilizer or amendment decisions.')
 elif page=='Agri Knowledge Assistant':
  st.markdown('<div class="hero"><h1>📚 Agricultural Knowledge Assistant</h1><p>Search curated agricultural knowledge locally using TF-IDF text similarity.</p></div>',unsafe_allow_html=True)
  q=st.text_input('Ask an agricultural question'); category=st.selectbox('Topic',['All']+sorted({x['category'] for x in KNOWLEDGE}))
