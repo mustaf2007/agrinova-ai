@@ -107,3 +107,19 @@ def soil_lab_summary(cleaned: pd.DataFrame) -> pd.DataFrame:
             "Maximum": round(float(values.max()), 3),
         })
     return pd.DataFrame(rows)
+
+
+
+def soil_lab_group_summary(cleaned: pd.DataFrame, group_by: str) -> pd.DataFrame:
+    """Summarize median and sample count by a supplied sample field."""
+    if group_by not in cleaned.columns:
+        return pd.DataFrame()
+    measurement_columns = [field for field in MEASUREMENTS if field in cleaned.columns]
+    if not measurement_columns:
+        return pd.DataFrame()
+    grouped = cleaned.groupby(group_by, dropna=False)[measurement_columns].agg(["count", "median"]).reset_index()
+    grouped.columns = [
+        group_by if column[0] == group_by else f"{MEASUREMENTS[column[0]]['label']} {column[1]}"
+        for column in grouped.columns.to_flat_index()
+    ]
+    return grouped
