@@ -237,7 +237,7 @@ elif page=='Crop Planner':
    else:
     st.warning('Live weather could not be retrieved for this location.')
    st.subheader('Recent historical climate context')
-   st.caption('NASA POWER daily point data for approximately the preceding 90 days. This is historical gridded climate information, not a farm weather-station measurement or a seasonal forecast.')
+   st.caption('NASA POWER daily point data for an approximately 90-day period ending five days before today, reflecting data availability delays. This is historical gridded climate information, not a farm weather-station measurement or a seasonal forecast.')
    with st.spinner('Retrieving recent historical climate indicators from NASA POWER...'):
     historical = get_historical_climate(planning_lat, planning_lon)
    if historical is not None and not historical.empty:
@@ -428,6 +428,8 @@ elif page=='Crop Planner':
     'historical_precipitation_mm': round(float(historical['PRECTOTCORR'].sum()), 2) if historical is not None and not historical.empty else 'Not available',
     'historical_valid_days': len(historical) if historical is not None and not historical.empty else 'Not available',
     'historical_period': f"{historical['date'].min().date()} to {historical['date'].max().date()}" if historical is not None and not historical.empty else 'Not available',
+    'historical_daily': [{'date': row['date'].date().isoformat(), 'temperature_c': row['T2M'], 'precipitation_mm_day': row['PRECTOTCORR']} for _, row in historical.iterrows()] if historical is not None and not historical.empty else [],
+    'forecast_daily': weather.get('daily', []) if weather else [],
     'ecocrop_scientific_name': eco.get('scientificname', 'Not listed') if eco else 'Not matched',
     'ecocrop_record_id': eco.get('ecoportcode', 'Not available') if eco else 'Not available',
     'ecocrop_indicators': report_eco_indicators,
