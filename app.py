@@ -9,7 +9,7 @@ from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
 from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
 from modules.crop_suitability import assess_crop_environment, normalize_spatial_observations, validate_geojson_boundaries
-from modules.soilgrids_wcs import fetch_nitrogen_coverages, fetch_nitrogen_geotiff, SOILGRIDS_NITROGEN_WCS, SOILGRIDS_WCS_DOCS
+from modules.soilgrids_wcs import fetch_nitrogen_coverages, fetch_nitrogen_geotiff, analyze_nitrogen_geotiff, SOILGRIDS_NITROGEN_WCS, SOILGRIDS_WCS_DOCS
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -653,6 +653,8 @@ elif page=='Spatial Evidence Explorer':
        st.session_state['soilgrids_geotiff_name'] = selected_coverage.replace('.', '_') + '.tif'
        st.session_state['soilgrids_geotiff_coverage'] = selected_coverage
        st.session_state['soilgrids_geotiff_bounds'] = boundary_bounds
+       st.session_state['soilgrids_geotiff_boundary'] = json.dumps(valid_boundary, sort_keys=True)
+       st.session_state['soilgrids_analysis'] = None
        st.session_state['soilgrids_geotiff_error'] = None
      except Exception as error:
       st.session_state['soilgrids_geotiff_bytes'] = None
@@ -662,21 +664,67 @@ elif page=='Spatial Evidence Explorer':
         and st.session_state.get('soilgrids_geotiff_bounds') == boundary_bounds):
      st.success(f"GeoTIFF received ({len(st.session_state['soilgrids_geotiff_bytes']):,} bytes).")
      st.download_button(
-      'Download SoilGrids nitrogen GeoTIFF',
+      'Download SoilGrids nitrogen bounding-rectangle GeoTIFF',
       data=st.session_state['soilgrids_geotiff_bytes'],
       file_name=st.session_state['soilgrids_geotiff_name'],
       mime='image/tiff',
       key='soilgrids_geotiff_download',
      )
+     boundary_fingerprint = json.dumps(valid_boundary, sort_keys=True)
+     if st.button('Clip to exact farm polygon and calculate statistics', key='analyze_soilgrids_polygon'):
+      try:
+       with st.spinner('Clipping raster to the farm polygon and summarizing valid pixels...'):
+        result = analyze_nitrogen_geotiff(
+         st.session_state['soilgrids_geotiff_bytes'],
+         valid_boundary,
+        )
+        st.session_state['soilgrids_analysis'] = result
+        st.session_state['soilgrids_analysis_coverage'] = selected_coverage
+        st.session_state['soilgrids_analysis_boundary'] = boundary_fingerprint
+        st.session_state['soilgrids_analysis_error'] = None
+      except Exception as error:
+       st.session_state['soilgrids_analysis'] = None
+       st.session_state['soilgrids_analysis_error'] = str(error)
+     analysis = st.session_state.get('soilgrids_analysis')
+     if (analysis
+         and st.session_state.get('soilgrids_analysis_coverage') == selected_coverage
+         and st.session_state.get('soilgrids_analysis_boundary') == boundary_fingerprint):
+      st.subheader('Farm polygon nitrogen raster summary')
+      st.caption('Descriptive statistics for valid modeled SoilGrids pixels inside the uploaded polygon. Source layer units: cg/kg. These are not laboratory measurements.')
+      m1, m2, m3 = st.columns(3)
+      with m1: metric('Mean nitrogen', f"{analysis['mean_cg_kg']:.2f} cg/kg", 'Modeled pixel average')
+      with m2: metric('Median nitrogen', f"{analysis['median_cg_kg']:.2f} cg/kg", 'Modeled pixel median')
+      with m3: metric('Valid pixel coverage', f"{analysis['valid_coverage_pct']:.1f}%", f"{analysis['valid_pixel_count']:,} of {analysis['pixel_count_inside_polygon']:,} polygon pixels")
+      stats = pd.DataFrame([
+       {'Statistic': 'Minimum', 'Value': analysis['minimum_cg_kg'], 'Unit': 'cg/kg'},
+       {'Statistic': '25th percentile', 'Value': analysis['q25_cg_kg'], 'Unit': 'cg/kg'},
+       {'Statistic': 'Mean', 'Value': analysis['mean_cg_kg'], 'Unit': 'cg/kg'},
+       {'Statistic': 'Median', 'Value': analysis['median_cg_kg'], 'Unit': 'cg/kg'},
+       {'Statistic': '75th percentile', 'Value': analysis['q75_cg_kg'], 'Unit': 'cg/kg'},
+       {'Statistic': 'Maximum', 'Value': analysis['maximum_cg_kg'], 'Unit': 'cg/kg'},
+       {'Statistic': 'Standard deviation', 'Value': analysis['std_cg_kg'], 'Unit': 'cg/kg'},
+       {'Statistic': 'NoData pixels', 'Value': analysis['nodata_pixel_count'], 'Unit': 'pixels'},
+      ])
+      st.dataframe(stats, use_container_width=True, hide_index=True)
+      st.caption(f"Raster CRS: {analysis['raster_crs']} · Pixel size: {analysis['raster_resolution']} · Pixel inclusion: {'all touched' if analysis['all_touched'] else 'pixel centre'}")
+      st.download_button(
+       'Download exact-polygon-clipped nitrogen GeoTIFF',
+       data=analysis['clipped_geotiff'],
+       file_name=selected_coverage.replace('.', '_') + '_farm_polygon_clip.tif',
+       mime='image/tiff',
+       key='soilgrids_polygon_clip_download',
+      )
+     elif st.session_state.get('soilgrids_analysis_error'):
+      st.warning(f"Raster analysis failed: {st.session_state['soilgrids_analysis_error']}")
     elif st.session_state.get('soilgrids_geotiff_error'):
      st.warning(f"GeoTIFF request failed: {st.session_state['soilgrids_geotiff_error']}")
    else:
     st.info('Upload and validate a GeoJSON farm boundary before requesting a raster subset.')
  st.markdown(f"[Open official SoilGrids WCS documentation]({SOILGRIDS_WCS_DOCS}) · [Open nitrogen WCS endpoint]({SOILGRIDS_NITROGEN_WCS})")
- st.caption("The SoilGrids REST point-query API remains separate from WCS. The integration can request a bounded nitrogen GeoTIFF for the uploaded boundary's bounding rectangle. It does not clip the raster to the exact polygon, sample pixels or calculate farm-level statistics.")
+ st.caption("The SoilGrids REST point-query API remains separate from WCS. The integration downloads a bounded nitrogen GeoTIFF, clips it to the exact uploaded polygon, and calculates descriptive statistics from valid modeled pixels. Results retain the source layer's cg/kg units and are not laboratory measurements.")
  st.markdown('**Preparing source data**')
  st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
- st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. A bounded nitrogen GeoTIFF can be downloaded for a validated GeoJSON boundary extent. Exact polygon clipping, raster pixel interpretation, zonal statistics and other SoilGrids properties are not yet implemented.')
+ st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. A bounded nitrogen GeoTIFF can be downloaded, clipped to the exact uploaded GeoJSON polygon and summarized with valid-pixel counts, coverage percentage, mean, median, quartiles, minimum, maximum and standard deviation. Other SoilGrids properties are not yet implemented.')
 elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Explore global modeled soil information and interpret your own laboratory measurements.</p></div>',unsafe_allow_html=True)
  st.subheader('Global modeled soil information')
