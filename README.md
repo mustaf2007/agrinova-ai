@@ -29,7 +29,7 @@ AgriNova AI is a Streamlit application designed for worldwide use. Its default e
 - Soil Health workspace with global SoilGrids source exploration, user-entered laboratory measurement interpretation, and CSV / Excel soil-lab data import with user-confirmed column mapping and validation
 - Live SoilGrids WCS GetCapabilities discovery for the official nitrogen service, listing advertised coverage identifiers
 - Bounded SoilGrids nitrogen GeoTIFF download for a validated GeoJSON boundary bounding rectangle, with WGS84-to-ISRIC Homolosine transformation, extent limits and TIFF-response validation
-- Agricultural Knowledge Assistant with general plant-care references for any plant type plus searchable crop-specific guidance where available; relevance-ranked search, topic filters, persistent results and browsable library (no external AI API)
+- Agricultural Knowledge Assistant with general plant-care references for any plant type, flexible common-name matching and live FAO ECOCROP species-level ecological references where available; crop-specific guidance, topic filters, persistent results and browsable library (no external AI API)
 - Data source and methodology catalog
 
 ## Run locally
