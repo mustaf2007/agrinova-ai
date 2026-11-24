@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import math
 import requests
-from pyproj import Transformer
+from pyproj import CRS, Transformer
 
 SOILGRIDS_NITROGEN_WCS = "https://maps.isric.org/mapserv?map=/map/nitrogen.map"
 SOILGRIDS_WCS_DOCS = "https://docs.isric.org/globaldata/soilgrids/wcs.html"
 SOILGRIDS_SUBSETTING_CRS = "http://www.opengis.net/def/crs/EPSG/0/152160"
 SOILGRIDS_OUTPUT_CRS = SOILGRIDS_SUBSETTING_CRS
+SOILGRIDS_HOMOLOSINE_PROJ4 = "+proj=igh +datum=WGS84 +no_defs +towgs84=0,0,0"
 MAX_BOUNDING_BOX_DEGREES = 0.25
 MAX_GEOTIFF_BYTES = 20 * 1024 * 1024
 
@@ -72,7 +73,11 @@ def get_coverage_request_params(coverage_id: str, bounds_wgs84: list[list[float]
             f"Maximum width and height are {MAX_BOUNDING_BOX_DEGREES} degrees."
         )
 
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:152160", always_xy=True)
+    transformer = Transformer.from_crs(
+        "EPSG:4326",
+        CRS.from_proj4(SOILGRIDS_HOMOLOSINE_PROJ4),
+        always_xy=True,
+    )
     corners = [
         transformer.transform(west, south),
         transformer.transform(west, north),
