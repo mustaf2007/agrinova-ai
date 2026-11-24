@@ -384,12 +384,8 @@ elif page=='Crop Planner':
        st.warning('Select at least a country column or crop column to enable filtering. You can still inspect the uploaded preview.')
     except (UnicodeDecodeError, pd.errors.ParserError, ValueError, ImportError, OSError) as exc:
      st.error(f'Could not read this file. Check that it is a valid CSV or Excel workbook. Details: {exc}')
-st.markdown('**Other authoritative references for future crop- and location-specific guidance:**')
-   st.markdown('- [FAO Crop Calendar](https://cropcalendar.apps.fao.org/) — planting and harvesting periods by country and agroecological zone where records exist.')
-   st.markdown('- [FAO ECOCROP / GAEZ](https://gaez.fao.org/pages/ecocrop) — broader crop ecological characteristics.')
-   st.markdown('- [FAO AQUASTAT irrigated crop calendars](https://www.fao.org/aquastat/en/databases/crop-calendar/) — historical country-level irrigated crop calendar information where available.')
-   st.info('AgriNova AI still withholds cultivar-specific planting dates, spacing, seed rates, fertilizer doses, irrigation schedules and yield estimates until authoritative matching data is available.')
-elif page=='Soil Health':
+   st.info('AgriNova AI withholds unsupported cultivar-specific planting dates, spacing, seed rates, fertilizer doses, irrigation schedules and yield estimates rather than inventing them.')
+ elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Interpret soil measurements supplied by the user.</p></div>',unsafe_allow_html=True)
  st.info('Use laboratory or field-test results. The app does not invent missing measurements or fertilizer rates.')
  with st.form('soil'):
