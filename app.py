@@ -5,6 +5,7 @@ import folium
 from streamlit_folium import st_folium
 from modules.data_sources import get_weather, get_historical_climate, search_global_locations, search_ecocrop, DATA_SOURCES
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
+from modules.reporting import build_farm_report_csv, build_farm_report_pdf
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -201,6 +202,7 @@ elif page=='Crop Planner':
   st.caption('Map-selected coordinates are prefilled automatically. You can adjust them manually or enter coordinates from a GPS device.')
   submitted=st.form_submit_button('Build crop planning profile',use_container_width=True)
  if submitted:
+  st.session_state.pop('farm_intelligence_report', None)
   if not region:
    st.error('Search for and select the country, region, district or nearest settlement for the farm.')
   elif _is_country_location(region) and not use_farm_coordinates:
@@ -255,6 +257,8 @@ elif page=='Crop Planner':
    st.caption('ECOCROP is a species-level ecological reference. It does not identify the selected cultivar and does not provide a complete farm management prescription.')
    with st.spinner('Searching the public FAO ECOCROP species reference...'):
     eco_records = search_ecocrop(crop)
+   eco = None
+   eco_rows = []
    if eco_records:
     eco_options = {record['_display']: record for record in eco_records}
     selected_eco_label = st.selectbox('Confirm the matching plant species', list(eco_options), key='planner_ecocrop_species')
@@ -405,7 +409,40 @@ elif page=='Crop Planner':
        st.warning('Select at least a country column or crop column to enable filtering. You can still inspect the uploaded preview.')
     except (UnicodeDecodeError, pd.errors.ParserError, ValueError, ImportError, OSError) as exc:
      st.error(f'Could not read this file. Check that it is a valid CSV or Excel workbook. Details: {exc}')
+   report_eco_indicators = [(row['Ecological indicator'], row['ECOCROP reference']) for row in eco_rows] if eco else []
+   st.session_state['farm_intelligence_report'] = {
+    'location': region.get('label', 'Not available'),
+    'location_precision': 'Exact farm coordinates' if use_farm_coordinates else 'Selected settlement / administrative reference point',
+    'latitude': f'{planning_lat:.5f}',
+    'longitude': f'{planning_lon:.5f}',
+    'crop': crop,
+    'variety': variety,
+    'area_ha': f'{area:g}',
+    'season': season,
+    'production_system': system,
+    'soil_ph': f'{soil_ph:.1f}' if soil_ph > 0 else 'Not supplied',
+    'current_temperature_c': weather.get('current_temp') if weather else 'Not available',
+    'relative_humidity_pct': weather.get('humidity') if weather else 'Not available',
+    'forecast_rainfall_7d_mm': weather.get('rain_7d') if weather else 'Not available',
+    'historical_mean_temperature_c': round(float(historical['T2M'].mean()), 2) if historical is not None and not historical.empty else 'Not available',
+    'historical_precipitation_mm': round(float(historical['PRECTOTCORR'].sum()), 2) if historical is not None and not historical.empty else 'Not available',
+    'historical_valid_days': len(historical) if historical is not None and not historical.empty else 'Not available',
+    'historical_period': f"{historical['date'].min().date()} to {historical['date'].max().date()}" if historical is not None and not historical.empty else 'Not available',
+    'ecocrop_scientific_name': eco.get('scientificname', 'Not listed') if eco else 'Not matched',
+    'ecocrop_record_id': eco.get('ecoportcode', 'Not available') if eco else 'Not available',
+    'ecocrop_indicators': report_eco_indicators,
+   }
    st.info('AgriNova AI withholds unsupported cultivar-specific planting dates, spacing, seed rates, fertilizer doses, irrigation schedules and yield estimates rather than inventing them.')
+ if st.session_state.get('farm_intelligence_report'):
+  st.divider()
+  st.subheader('Download farm intelligence report')
+  st.caption('Exports the profile and evidence available for this submission. Missing data remain labelled as unavailable; no unsupported agronomic prescription is added.')
+  report_data = st.session_state['farm_intelligence_report']
+  dl1, dl2 = st.columns(2)
+  with dl1:
+   st.download_button('Download PDF report', data=build_farm_report_pdf(report_data), file_name='agrinova_farm_intelligence_report.pdf', mime='application/pdf', use_container_width=True)
+  with dl2:
+   st.download_button('Download CSV data', data=build_farm_report_csv(report_data), file_name='agrinova_farm_intelligence_report.csv', mime='text/csv', use_container_width=True)
 elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Interpret soil measurements supplied by the user.</p></div>',unsafe_allow_html=True)
  st.info('Use laboratory or field-test results. The app does not invent missing measurements or fertilizer rates.')
