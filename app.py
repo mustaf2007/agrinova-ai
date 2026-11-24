@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
-from modules.data_sources import get_weather, get_historical_climate, search_global_locations, DATA_SOURCES
+from modules.data_sources import get_weather, get_historical_climate, search_global_locations, search_ecocrop, DATA_SOURCES
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
@@ -235,12 +235,56 @@ elif page=='Crop Planner':
    else:
     st.warning('Live weather could not be retrieved for this location.')
    st.subheader('Agronomic evidence and recommendation status')
-   st.warning('AgriNova AI does not yet have a verified, variety-specific agronomic record for every crop and location. It will not invent planting dates, spacing, seed rates, fertilizer doses, irrigation schedules, maturity periods or yield estimates.')
-   st.markdown('For a defensible recommendation, the selected crop and variety must be matched against an authoritative country or agroecological-zone record. Start with these references:')
-   st.markdown('- [FAO Crop Calendar](https://cropcalendar.apps.fao.org/) — country- and agroecological-zone-specific planting and harvesting periods and crop practices where records exist.')
-   st.markdown('- [FAO ECOCROP / GAEZ](https://gaez.fao.org/pages/ecocrop) — ecological requirements for thousands of plant species; not a substitute for cultivar-specific management guidance.')
+   st.caption('ECOCROP is a species-level ecological reference. It does not identify the selected cultivar and does not provide a complete farm management prescription.')
+   with st.spinner('Searching the public FAO ECOCROP species reference...'):
+    eco_records = search_ecocrop(crop)
+   if eco_records:
+    eco_options = {record['_display']: record for record in eco_records}
+    selected_eco_label = st.selectbox('Confirm the matching plant species', list(eco_options), key='planner_ecocrop_species')
+    eco = eco_options[selected_eco_label]
+    st.success(f"Species reference found: {eco.get('scientificname', 'Scientific name not listed')}")
+    def _eco_value(value, unit=''):
+     if value is None or (isinstance(value, float) and pd.isna(value)):
+      return 'Not available'
+     if isinstance(value, (int, float)):
+      return f'{value:g}{unit}'
+     if isinstance(value, (list, tuple)):
+      return ', '.join(str(x) for x in value)
+     return str(value)
+    def _eco_range(low, high, unit=''):
+     left, right = _eco_value(eco.get(low), unit), _eco_value(eco.get(high), unit)
+     return f'{left} to {right}' if left != 'Not available' or right != 'Not available' else 'Not available'
+    eco_rows = [
+     {'Ecological indicator':'Optimal temperature range','ECOCROP reference':_eco_range('topmn','topmx',' °C')},
+     {'Ecological indicator':'Absolute temperature limits','ECOCROP reference':_eco_range('tmin','tmax',' °C')},
+     {'Ecological indicator':'Optimal annual rainfall','ECOCROP reference':_eco_range('ropmn','ropmx',' mm/year')},
+     {'Ecological indicator':'Absolute annual rainfall limits','ECOCROP reference':_eco_range('rmin','rmax',' mm/year')},
+     {'Ecological indicator':'Crop-cycle range','ECOCROP reference':_eco_range('gmin','gmax',' days')},
+     {'Ecological indicator':'Optimal soil pH','ECOCROP reference':_eco_range('phopmn','phopmx')},
+     {'Ecological indicator':'Absolute soil pH limits','ECOCROP reference':_eco_range('phmin','phmax')},
+     {'Ecological indicator':'Preferred soil texture','ECOCROP reference':_eco_value(eco.get('text'))},
+     {'Ecological indicator':'Climate zones','ECOCROP reference':_eco_value(eco.get('cliz'))},
+    ]
+    st.dataframe(pd.DataFrame(eco_rows), use_container_width=True, hide_index=True)
+    st.caption(f"ECOCROP species record ID: {eco.get('ecoportcode', 'not supplied')} · [FAO ECOCROP](https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id={eco.get('ecoportcode', '')})")
+    st.warning('These are expert-compiled ecological reference values, not measured conditions at this farm or validated cultivar-specific thresholds. Missing fields remain unavailable. Annual rainfall values must not be compared directly with the 7-day forecast.')
+    if soil_ph > 0:
+     ph_min, ph_max = eco.get('phmin'), eco.get('phmax')
+     ph_opt_min, ph_opt_max = eco.get('phopmn'), eco.get('phopmx')
+     if all(isinstance(v, (int, float)) and not pd.isna(v) for v in [ph_min, ph_max]):
+      if ph_min <= soil_ph <= ph_max:
+       st.info(f'Reported soil pH {soil_ph:.1f} falls within the ECOCROP absolute pH range ({ph_min:g}–{ph_max:g}). This is a reference-range check, not a soil fertility diagnosis.')
+      else:
+       st.warning(f'Reported soil pH {soil_ph:.1f} is outside the ECOCROP absolute pH range ({ph_min:g}–{ph_max:g}). Verify the laboratory result and local soil conditions.')
+     else:
+      st.caption('ECOCROP does not provide an absolute soil pH range for this species record.')
+   else:
+    st.info('No confident ECOCROP species match was returned for this crop name, or the public dataset could not be reached. No ecological thresholds have been inferred.')
+   st.markdown('**Other authoritative references for future crop- and location-specific guidance:**')
+   st.markdown('- [FAO Crop Calendar](https://cropcalendar.apps.fao.org/) — planting and harvesting periods by country and agroecological zone where records exist.')
+   st.markdown('- [FAO ECOCROP / GAEZ](https://gaez.fao.org/pages/ecocrop) — broader crop ecological characteristics.')
    st.markdown('- [FAO AQUASTAT irrigated crop calendars](https://www.fao.org/aquastat/en/databases/crop-calendar/) — historical country-level irrigated crop calendar information where available.')
-   st.info('The next data integration step is to connect these source records to this crop, cultivar and location profile. Until then, detailed agronomic fields should be treated as unavailable rather than filled with generic advice.')
+   st.info('AgriNova AI still withholds cultivar-specific planting dates, spacing, seed rates, fertilizer doses, irrigation schedules and yield estimates until authoritative matching data is available.')
 elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Interpret soil measurements supplied by the user.</p></div>',unsafe_allow_html=True)
  st.info('Use laboratory or field-test results. The app does not invent missing measurements or fertilizer rates.')
