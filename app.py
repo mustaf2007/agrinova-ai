@@ -385,7 +385,7 @@ elif page=='Crop Planner':
     except (UnicodeDecodeError, pd.errors.ParserError, ValueError, ImportError, OSError) as exc:
      st.error(f'Could not read this file. Check that it is a valid CSV or Excel workbook. Details: {exc}')
    st.info('AgriNova AI withholds unsupported cultivar-specific planting dates, spacing, seed rates, fertilizer doses, irrigation schedules and yield estimates rather than inventing them.')
- elif page=='Soil Health':
+elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Interpret soil measurements supplied by the user.</p></div>',unsafe_allow_html=True)
  st.info('Use laboratory or field-test results. The app does not invent missing measurements or fertilizer rates.')
  with st.form('soil'):
