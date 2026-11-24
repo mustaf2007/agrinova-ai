@@ -840,18 +840,47 @@ elif page=='Soil Health':
   except (ValueError, OSError, ImportError, UnicodeDecodeError) as error:
    st.error(f'Could not read this soil dataset: {error}. Check the file format and try again.')
 elif page=='Agri Knowledge Assistant':
- st.markdown('<div class="hero"><h1>📚 Agricultural Knowledge Assistant</h1><p>Search curated agricultural knowledge locally using TF-IDF text similarity.</p></div>',unsafe_allow_html=True)
- q=st.text_input('Ask an agricultural question'); category=st.selectbox('Topic',['All']+sorted({x['category'] for x in KNOWLEDGE}))
- if st.button('Search') and q.strip():
-  results=search_knowledge(q,category)
-  if results:
-   for item in results:
-    with st.expander(item['title'],expanded=True): st.write(item['answer']); st.caption('Source: '+item['source'])
-  else: st.info('No close match; try other keywords or browse topics below.')
+ st.markdown('<div class="hero"><h1>📚 Agricultural Knowledge Assistant</h1><p>Search the curated knowledge library and built-in crop guidance locally. No external AI service or paid API key is required.</p></div>',unsafe_allow_html=True)
+ q=st.text_input('Ask an agricultural question', placeholder='e.g. sorghum, maize water stress, fall armyworm, soil organic matter')
+ category=st.selectbox('Topic',['All']+sorted({x['category'] for x in KNOWLEDGE}), key='knowledge_topic_filter')
+ search_col, clear_col = st.columns([1, 1])
+ with search_col:
+  search_clicked = st.button('Search knowledge library', use_container_width=True, key='knowledge_search_button')
+ with clear_col:
+  clear_clicked = st.button('Clear search', use_container_width=True, key='knowledge_clear_button')
+ if search_clicked:
+  st.session_state['knowledge_search_query'] = q.strip()
+  st.session_state['knowledge_search_category'] = category
+  st.session_state['knowledge_search_results'] = search_knowledge(q, category) if q.strip() else []
+  st.session_state['knowledge_search_submitted'] = True
+ if clear_clicked:
+  for key in ('knowledge_search_query','knowledge_search_category','knowledge_search_results','knowledge_search_submitted'):
+   st.session_state.pop(key, None)
+ if st.session_state.get('knowledge_search_submitted'):
+  submitted_query = st.session_state.get('knowledge_search_query', '')
+  submitted_category = st.session_state.get('knowledge_search_category', 'All')
+  if not submitted_query:
+   st.info('Enter a question or a few keywords before searching.')
+  elif submitted_category != category:
+   st.info('The topic filter has changed. Run the search again to refresh the results.')
+  else:
+   results = st.session_state.get('knowledge_search_results', [])
+   st.subheader('Search results')
+   if results:
+    st.caption(f"{len(results)} relevant article(s) found for: {submitted_query}")
+    for item in results:
+     with st.expander(item['title'], expanded=True):
+      st.write(item['answer'])
+      st.caption('Topic: '+item['category']+' · Source: '+item['source'])
+   else:
+    st.info('No close match in the current library. Try a crop name or related terms, or browse the knowledge library below.')
  st.subheader('Knowledge library')
- for item in KNOWLEDGE:
-  if category=='All' or item['category']==category:
-   with st.expander(item['title']): st.write(item['answer']); st.caption('Source: '+item['source'])
+ visible_items = [item for item in KNOWLEDGE if category=='All' or item['category']==category]
+ st.caption(f'{len(visible_items)} curated entries available')
+ for item in visible_items:
+  with st.expander(item['title']):
+   st.write(item['answer'])
+   st.caption('Topic: '+item['category']+' · Source: '+item['source'])
 elif page=='Data Sources & Methodology':
  st.markdown('<div class="hero"><h1>🗂️ Data Sources & Methodology</h1><p>Transparent source coverage, access notes and limitations.</p></div>',unsafe_allow_html=True)
  st.dataframe(pd.DataFrame(DATA_SOURCES),use_container_width=True,hide_index=True,column_config={'URL':st.column_config.LinkColumn('Source website')})
