@@ -47,14 +47,29 @@ KNOWLEDGE = [
 ]
 
 def get_crop_guidance(crop, region, season, farm_size):
+    crop_profile = CROPS.get(crop)
+    if crop_profile:
+        water = crop_profile["water"]
+        duration = crop_profile["duration"]
+        guidance = CROP_GUIDANCE.get(crop, [])
+    else:
+        water = "Species- and growth-stage-dependent"
+        duration = "Varies by species and variety"
+        guidance = [
+            f"Identify the exact species and variety of {crop} before selecting seed, planting material or production practices.",
+            "Use locally validated extension guidance for planting time, spacing, water and nutrient management.",
+            "Monitor the crop regularly and use integrated pest and disease management based on confirmed field observations.",
+            "Consult a local agronomist or extension service for crop-specific recommendations."
+        ]
     return {
-        "water": CROPS[crop]["water"],
-        "duration": CROPS[crop]["duration"],
-        "guidance": CROP_GUIDANCE.get(crop, []),
+        "water": water,
+        "duration": duration,
+        "guidance": guidance,
         "cautions": [
             f"Planning location: {region}. These are general crop characteristics, not a district-level suitability map.",
             f"Season selected: {season}. Confirm seasonal onset and rainfall outlook before planting.",
             "Seed rate, fertilizer rate and expected yield are not calculated because variety- and soil-specific local evidence is required.",
+            "For user-entered crops or plants outside the built-in reference list, water needs and growing duration are intentionally left species-dependent rather than guessed.",
             "Use local extension guidance and a soil test to finalize input decisions."
         ],
     }
