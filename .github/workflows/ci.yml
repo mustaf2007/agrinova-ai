@@ -62,10 +62,19 @@ jobs:
           assert sorghum_topic_results
           assert all(item["category"] == "Crop-specific guidance" for item in sorghum_topic_results)
           assert search_knowledge("fall armyworm", "Water management") == []
+          eggplant_results = search_knowledge("egg plant")
+          assert eggplant_results
+          assert all(item["category"] != "Crop-specific guidance" for item in eggplant_results)
+          assert any(item["category"] == "General plant guidance" for item in eggplant_results)
+          assert not any("Maize production guidance" == item["title"] for item in eggplant_results)
+          dragonfruit_results = search_knowledge("dragon fruit watering")
+          assert dragonfruit_results
+          assert any(item["category"] == "General plant guidance" for item in dragonfruit_results)
+          assert search_knowledge("mango tree care", "General plant guidance")
           assert search_knowledge("") == []
           assert search_knowledge("about") == []
           assert len(search_knowledge("maize", limit=1)) <= 1
-          assert len(KNOWLEDGE) >= 19
+          assert len(KNOWLEDGE) >= 28
           soil_missing = assess_soil(None, None, None, None, None, None, "Maize")
           assert len(soil_missing) == 1
           assert soil_missing[0][0] == "Crop context"
