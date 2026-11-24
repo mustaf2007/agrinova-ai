@@ -151,6 +151,11 @@ jobs:
           assert ("COVERAGEID", "nitrogen_0-5cm_Q0.5") in wcs_params
           assert len([item for item in wcs_params if item[0] == "SUBSET"]) == 2
           assert any(item[0] == "SUBSETTINGCRS" for item in wcs_params)
+          x_subset = next(value for key, value in wcs_params if key == "SUBSET" and value.startswith("X("))
+          y_subset = next(value for key, value in wcs_params if key == "SUBSET" and value.startswith("Y("))
+          assert "5008359" in x_subset and "5013871" in x_subset
+          assert "222638" in y_subset and "228205" in y_subset
+
           try:
               get_coverage_request_params("soc_0-5cm_Q0.5", [[2.0, 45.0], [2.05, 45.05]])
               raise AssertionError("Non-nitrogen coverage should be rejected.")
