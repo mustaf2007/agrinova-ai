@@ -161,24 +161,40 @@ elif page=='Crop Planner':
    season=st.selectbox('Production season',['Main rainy season','Short rainy season','Dry / irrigated season','Year-round / perennial','Not sure'])
    system=st.selectbox('Production system',['Rainfed','Irrigated','Rainfed and supplementary irrigation','Protected cultivation','Not sure'])
    soil_ph=st.number_input('Soil pH (optional; enter 0 if not tested)',min_value=0.0,max_value=14.0,value=0.0,step=.1)
+  st.markdown('**Optional: use exact farm coordinates**')
+  use_farm_coordinates=st.checkbox('I know the farm latitude and longitude')
+  default_lat=float(region['latitude']) if region else 0.0
+  default_lon=float(region['longitude']) if region else 0.0
+  coord1,coord2=st.columns(2)
+  with coord1:
+   farm_lat=st.number_input('Farm latitude',min_value=-90.0,max_value=90.0,value=default_lat,step=0.0001,format='%.5f',disabled=not use_farm_coordinates)
+  with coord2:
+   farm_lon=st.number_input('Farm longitude',min_value=-180.0,max_value=180.0,value=default_lon,step=0.0001,format='%.5f',disabled=not use_farm_coordinates)
+  st.caption('Exact coordinates improve local weather matching. You can obtain them from a GPS device or a map app.')
   submitted=st.form_submit_button('Build crop planning profile',use_container_width=True)
  if submitted:
   if not region:
-   st.error('Search for and select the actual farm location before generating the planning profile.')
-  elif _is_country_location(region):
-   st.error('A country-level reference point is too broad for farm planning. Search again and select the farm city, town, district or region.')
+   st.error('Search for and select the country, region, district or nearest settlement for the farm.')
+  elif _is_country_location(region) and not use_farm_coordinates:
+   st.error('A country-level reference point is too broad for farm planning. Select a city, town, district or region, or provide exact farm coordinates.')
   elif not crop.strip() or crop == 'Custom crop / plant':
    st.error('Enter a specific crop or plant name.')
   elif not variety.strip():
    st.error('Enter the crop variety or cultivar. If it is genuinely unknown, enter “Unknown”; variety-specific recommendations will then be withheld.')
   else:
-   weather=get_weather(region['latitude'],region['longitude'])
+   planning_lat=float(farm_lat) if use_farm_coordinates else float(region['latitude'])
+   planning_lon=float(farm_lon) if use_farm_coordinates else float(region['longitude'])
+   weather=get_weather(planning_lat,planning_lon)
    st.subheader('Farm and crop profile')
    p1,p2,p3,p4=st.columns(4)
    with p1: metric('Crop / plant',crop)
    with p2: metric('Variety / cultivar',variety)
-   with p3: metric('Farm location',region['label'])
+   with p3: metric('Farm location','Exact farm coordinates' if use_farm_coordinates else region['label'])
    with p4: metric('Farm size',f'{area:g} ha')
+   if use_farm_coordinates:
+    st.write(f'**Farm coordinates:** {planning_lat:.5f}°, {planning_lon:.5f}°')
+   else:
+    st.caption('Weather is based on the selected settlement or administrative-area reference point, not an exact farm GPS location.')
    st.write(f"**Production season:** {season}  |  **Production system:** {system}")
    if soil_ph > 0: st.write(f'**Reported soil pH:** {soil_ph:.1f}')
    if weather:
