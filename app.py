@@ -840,8 +840,8 @@ elif page=='Soil Health':
   except (ValueError, OSError, ImportError, UnicodeDecodeError) as error:
    st.error(f'Could not read this soil dataset: {error}. Check the file format and try again.')
 elif page=='Agri Knowledge Assistant':
- st.markdown('<div class="hero"><h1>📚 Agricultural Knowledge Assistant</h1><p>Search the curated knowledge library and built-in crop guidance locally. No external AI service or paid API key is required.</p></div>',unsafe_allow_html=True)
- q=st.text_input('Ask an agricultural question', placeholder='e.g. sorghum, maize water stress, fall armyworm, soil organic matter')
+ st.markdown('<div class="hero"><h1>📚 Agricultural Knowledge Assistant</h1><p>Ask about any plant, from vegetables and fruit trees to herbs and ornamentals. Search broad plant-care references and available crop-specific guidance locally; no external AI service or paid API key is required.</p></div>',unsafe_allow_html=True)
+ q=st.text_input('Ask an agricultural question', placeholder='e.g. eggplant care, dragon fruit watering, mango tree pests, sorghum, soil organic matter')
  category=st.selectbox('Topic',['All']+sorted({x['category'] for x in KNOWLEDGE}), key='knowledge_topic_filter')
  search_col, clear_col = st.columns([1, 1])
  with search_col:
@@ -873,7 +873,7 @@ elif page=='Agri Knowledge Assistant':
       st.write(item['answer'])
       st.caption('Topic: '+item['category']+' · Source: '+item['source'])
    else:
-    st.info('No close match in the current library. Try a crop name or related terms, or browse the knowledge library below.')
+    st.info('No close match in the current library. Try describing the plant, growing condition or symptom, or browse the general plant-care references below.')
  st.subheader('Knowledge library')
  visible_items = [item for item in KNOWLEDGE if category=='All' or item['category']==category]
  st.caption(f'{len(visible_items)} curated entries available')
