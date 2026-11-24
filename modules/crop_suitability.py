@@ -84,13 +84,20 @@ def normalize_spatial_observations(
         | ~output["longitude"].between(-180, 180)
     )
     output["source_row"] = range(2, len(output) + 2)
+    warnings = []
     if temperature_column and temperature_column in frame.columns:
-        output["mean_temperature_c"] = pd.to_numeric(frame[temperature_column], errors="coerce")
+        temperature = pd.to_numeric(frame[temperature_column], errors="coerce")
+        output["mean_temperature_c"] = temperature
+        invalid_temperature = frame[temperature_column].notna() & temperature.isna()
+        if invalid_temperature.any():
+            warnings.append(f"{int(invalid_temperature.sum())} non-numeric temperature value(s) were left unavailable.")
     if soil_ph_column and soil_ph_column in frame.columns:
         ph = pd.to_numeric(frame[soil_ph_column], errors="coerce")
+        invalid_ph = ph.notna() & ~ph.between(0, 14)
         output["soil_ph"] = ph.where(ph.between(0, 14))
+        if invalid_ph.any():
+            warnings.append(f"{int(invalid_ph.sum())} soil pH value(s) outside 0–14 were left unavailable.")
     output = output.loc[~invalid_coordinates].copy().reset_index(drop=True)
-    warnings = []
     dropped = int(invalid_coordinates.sum())
     if dropped:
         warnings.append(f"{dropped} row(s) with missing or out-of-range coordinates were excluded.")
