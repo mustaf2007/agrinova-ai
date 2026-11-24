@@ -34,11 +34,16 @@ jobs:
               "variety": "Example cultivar",
               "area_ha": 2,
               "ecocrop_indicators": [("Optimal temperature range", "18 to 30 °C")],
+              "forecast_daily": [{"date": "2026-11-24", "temp_max": 30, "temp_min": 22, "precipitation": 1.5}],
+              "historical_daily": [{"date": "2026-11-10", "temperature_c": 27.5, "precipitation_mm_day": 0.2}],
           }
           csv_data = build_farm_report_csv(sample)
           pdf_data = build_farm_report_pdf(sample)
           assert csv_data.startswith(b"\xef\xbb\xbf")
           assert b"Maize" in csv_data
+          assert b"Open-Meteo" in csv_data
+          assert b"NASA POWER" in csv_data
+          assert b"2026-11-10" in csv_data
           assert pdf_data.startswith(b"%PDF-")
           assert len(pdf_data) > 1000
           print("PDF and CSV report exports passed.")
