@@ -29,7 +29,7 @@ jobs:
           from modules.reporting import build_farm_report_csv, build_farm_report_pdf
           from modules.agronomy import assess_soil
           import pandas as pd
-          from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary
+          from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -69,5 +69,8 @@ jobs:
           assert lab_check["rows_with_measurements"] == 3
           assert pd.isna(lab_clean.loc[2, "soil_ph"])
           assert len(soil_lab_summary(lab_clean)) == 2
+          grouped_lab = soil_lab_group_summary(lab_clean, "depth_cm")
+          assert len(grouped_lab) == 3
+          assert "Soil pH median" in grouped_lab.columns
           print("PDF/CSV exports, soil missingness and lab-import checks passed.")
           PY
