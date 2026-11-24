@@ -46,6 +46,18 @@ KNOWLEDGE = [
     {"title":"Crop rotation with legumes","category":"Crop planning","answer":"Rotating cereals with legumes such as cowpea or groundnut can diversify production and may improve soil nitrogen dynamics. Benefits depend on biomass returned, nodulation, harvest removal, pest cycles and local conditions.","source":"FAO and CGIAR crop rotation research; local trials recommended."},
 ]
 
+# Make the built-in crop-planning guidance searchable from the Knowledge Assistant.
+# These entries reuse the existing crop guidance verbatim and are labelled as
+# AgriNova's general reference content, not as externally verified local advice.
+for _crop_name, _guidance_items in CROP_GUIDANCE.items():
+    KNOWLEDGE.append({
+        "title": f"{_crop_name} production guidance",
+        "category": "Crop-specific guidance",
+        "answer": " ".join(_guidance_items),
+        "source": "AgriNova AI built-in crop guidance; confirm recommendations with local agricultural extension services.",
+    })
+
+
 def get_crop_guidance(crop, region, season, farm_size):
     crop_profile = CROPS.get(crop)
     if crop_profile:
@@ -138,26 +150,62 @@ def screen_crop_symptoms(crop, symptoms, plant_part, conditions):
         actions.append("Given reported hot and dry conditions, check for heat and moisture stress before assuming an infectious disease.")
     return {"likely_issue":likely,"explanation":explanation,"actions":actions}
 
-def search_knowledge(query, category="All"):
-    candidates = [item for item in KNOWLEDGE if category == "All" or item["category"] == category]
-    if not query.strip() or not candidates:
+def search_knowledge(query, category="All", limit=5):
+    """Search curated articles and built-in crop guidance with a safe fallback."""
+    if not isinstance(query, str) or not query.strip():
         return []
-    documents = [" ".join([x["title"], x["category"], x["answer"]]) for x in candidates]
+    if not isinstance(limit, int) or limit < 1:
+        return []
+    candidates = [
+        item for item in KNOWLEDGE
+        if category == "All" or item.get("category") == category
+    ]
+    if not candidates:
+        return []
+
+    normalized_query = " ".join(re.findall(r"[a-zA-Z0-9]+", query.lower()))
+    if not normalized_query:
+        return []
+    documents = [
+        " ".join([
+            item.get("title", ""),
+            item.get("category", ""),
+            item.get("answer", ""),
+        ])
+        for item in candidates
+    ]
     try:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
-        vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
-        matrix = vectorizer.fit_transform(documents + [query])
+
+        vectorizer = TfidfVectorizer(
+            stop_words="english",
+            ngram_range=(1, 2),
+            strip_accents="unicode",
+        )
+        matrix = vectorizer.fit_transform(documents + [normalized_query])
         scores = cosine_similarity(matrix[-1], matrix[:-1]).ravel()
-        ranked = sorted(zip(scores, candidates), key=lambda x: x[0], reverse=True)
-        return [item for score, item in ranked if score > 0][:5]
+        ranked = sorted(
+            zip(scores, candidates),
+            key=lambda pair: pair[0],
+            reverse=True,
+        )
+        return [item for score, item in ranked if score > 0][:limit]
     except (ImportError, ValueError):
-        tokens = set(re.findall(r"[a-zA-Z]{3,}", query.lower()))
+        # Lightweight token-overlap fallback if scikit-learn is unavailable
+        # or the indexed text has no usable vocabulary.
+        stop_words = {"about", "what", "how", "when", "where", "why", "the", "and", "for"}
+        tokens = {
+            token for token in re.findall(r"[a-zA-Z0-9]+", normalized_query)
+            if len(token) > 1 and token not in stop_words
+        }
+        if not tokens:
+            return []
         ranked = []
         for item, document in zip(candidates, documents):
-            words = set(re.findall(r"[a-zA-Z]{3,}", document.lower()))
-            score = len(tokens & words) / max(len(tokens), 1)
+            words = set(re.findall(r"[a-zA-Z0-9]+", document.lower()))
+            score = len(tokens & words) / len(tokens)
             if score > 0:
                 ranked.append((score, item))
-        ranked.sort(key=lambda x: x[0], reverse=True)
-        return [item for _, item in ranked[:5]]
+        ranked.sort(key=lambda pair: pair[0], reverse=True)
+        return [item for _, item in ranked[:limit]]
