@@ -20,6 +20,14 @@ st.markdown(f'''<style>.stApp{{background:{t['bg']};color:{t['text']}}}[data-tes
 def metric(label,value,note=''):
  st.markdown(f'<div class="metric-card"><div class="metric-label">{label}</div><div class="metric-value">{value}</div><div class="metric-label">{note}</div></div>',unsafe_allow_html=True)
 
+def crop_plant_picker(key, label="Crop or plant"):
+ options = list(CROPS) + ["Other / any crop or plant"]
+ selected = st.selectbox(label, options, key=f"{key}_crop_choice")
+ if selected == "Other / any crop or plant":
+  custom = st.text_input("Enter crop or plant name", placeholder="e.g. cassava, avocado, coffee, mango, wheat, herbs, pasture grass", key=f"{key}_custom_crop")
+  return custom.strip() or "Custom crop / plant"
+ return selected
+
 def global_location_picker(key, label="Search location worldwide"):
  query = st.text_input(label, placeholder="Enter a city, region or country (e.g. Nairobi, Punjab, Brazil)", key=f"{key}_global_search")
  if len(query.strip()) < 2:
@@ -41,7 +49,7 @@ with st.sidebar:
 if page=='Overview':
  st.markdown('<div class="hero"><h1>🌱 AgriNova AI</h1><p>AI-powered agricultural intelligence for healthier crops and better farming decisions.</p></div>',unsafe_allow_html=True)
  location = global_location_picker("overview")
- crop=st.selectbox('Crop focus',list(CROPS))
+ crop=crop_plant_picker('overview', 'Crop or plant focus')
  w = get_weather(location["latitude"], location["longitude"]) if location else None
  x1,x2,x3,x4=st.columns(4)
  with x1: metric('Geographic coverage','Worldwide','Search any country, region or city')
@@ -61,7 +69,7 @@ elif page=='Crop Health Screening':
  location = global_location_picker("health", "Search farm location worldwide (optional)")
  with st.form('health'):
   a,b=st.columns(2)
-  with a: crop=st.selectbox('Crop',list(CROPS)); part=st.selectbox('Affected part',['Leaves','Stem','Roots','Fruit / grain','Whole plant']); symptoms=st.multiselect('Symptoms',['Yellowing leaves','Brown or black spots','White powdery growth','Wilting','Holes or chewing damage','Mosaic / mottled pattern','Stunted growth','Rotting / soft tissue','Rust-colored pustules','Leaf edges drying'])
+  with a: crop=crop_plant_picker('health', 'Crop or plant'); part=st.selectbox('Affected part',['Leaves','Stem','Roots','Fruit / grain','Whole plant']); symptoms=st.multiselect('Symptoms',['Yellowing leaves','Brown or black spots','White powdery growth','Wilting','Holes or chewing damage','Mosaic / mottled pattern','Stunted growth','Rotting / soft tissue','Rust-colored pustules','Leaf edges drying'])
   with b: severity=st.select_slider('Severity',['Low','Moderate','High','Severe'],value='Moderate'); conditions=st.multiselect('Recent conditions',['Heavy rainfall','High humidity','Hot and dry weather','Waterlogging','Recent irrigation','Unknown'])
   photo=st.file_uploader('Optional crop photograph (JPG/PNG)',type=['jpg','jpeg','png']); submit=st.form_submit_button('Screen symptoms',use_container_width=True)
  if submit:
@@ -92,7 +100,7 @@ elif page=='Crop Planner':
  st.markdown('<div class="hero"><h1>🌾 Crop Planning</h1><p>Crop-specific general guidance and planning considerations.</p></div>',unsafe_allow_html=True)
  region = global_location_picker("planner", "Search farm location worldwide (optional)")
  a,b=st.columns(2)
- with a: crop=st.selectbox('Crop',list(CROPS))
+ with a: crop=crop_plant_picker('planner', 'Crop or plant')
  with b: area=st.number_input('Farm size (hectares)',min_value=.01,value=1.0,step=.5); season=st.selectbox('Season',['Main rainy season','Short rainy season','Dry / irrigated season','Not sure'])
  region_name = region["label"] if region else "Global / location not specified"
  g=get_crop_guidance(crop,region_name,season,area); a,b,c=st.columns(3)
@@ -111,7 +119,7 @@ elif page=='Soil Health':
   with a: ph=st.number_input('Soil pH',0.,14.,6.5,.1); organic=st.number_input('Organic matter (%)',0.,100.,1.5,.1)
   with b: ec=st.number_input('Electrical conductivity (dS/m)',0.,100.,.5,.1); n=st.number_input('Nitrogen (mg/kg)',0.,value=20.)
   with c: p=st.number_input('Available phosphorus (mg/kg)',0.,value=10.); k=st.number_input('Available potassium (mg/kg)',0.,value=100.)
-  crop=st.selectbox('Crop',list(CROPS)); submit=st.form_submit_button('Assess soil indicators')
+  crop=crop_plant_picker('soil', 'Crop or plant'); submit=st.form_submit_button('Assess soil indicators')
  if submit:
   for label,desc in assess_soil(ph,organic,ec,n,p,k,crop): st.markdown(f'**{label}:** {desc}')
   st.warning('Interpretation depends on laboratory method, soil texture and regional calibration. Use a recognized soil laboratory for fertilizer decisions.')
