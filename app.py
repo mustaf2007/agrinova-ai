@@ -35,6 +35,32 @@ html,body,[class*="css"]{{font-family:Inter,ui-sans-serif,system-ui,-apple-syste
 [data-testid="stSidebar"] [data-testid="stRadio"] [aria-checked="true"]{{background:{t['soft']};font-weight:700}}
 .hero{{position:relative;overflow:hidden;background:linear-gradient(115deg,{t['soft']} 0%,{t['panel']} 58%,{t['soft']} 130%);border:1px solid {t['border']};border-radius:22px;padding:1.7rem 1.8rem;margin:.15rem 0 1.35rem;box-shadow:0 8px 26px rgba(25,60,40,.045)}}
 .hero:after{{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-55px;top:-85px;background:{t['accent']};opacity:.075;pointer-events:none}}
+.agri-hero{{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:310px;overflow:hidden;padding:2.1rem 2.3rem;margin:.15rem 0 1.8rem;border-radius:25px;border:1px solid {t['border']};background:linear-gradient(112deg,{t['soft']} 0%,{t['panel']} 57%,{t['soft']} 130%);box-shadow:0 12px 34px rgba(24,60,38,.07)}}
+.agri-hero-copy{{position:relative;z-index:3;max-width:650px}}
+.agri-eyebrow,.agri-kicker{{font-size:.72rem;font-weight:800;letter-spacing:.13em;color:{t['accent']};margin-bottom:.8rem}}
+.agri-hero h1{{font-size:clamp(2rem,4vw,3.35rem);line-height:1.04;letter-spacing:-.055em;font-weight:850;margin:0 0 .85rem}}
+.agri-hero h1 span{{color:{t['accent']}}}
+.agri-hero p{{font-size:1.02rem;line-height:1.65;color:{t['muted']};max-width:590px;margin:0 0 1.2rem}}
+.agri-tags{{display:flex;flex-wrap:wrap;gap:.5rem}}
+.agri-tags span{{font-size:.78rem;font-weight:650;color:{t['text']};background:{t['panel']};border:1px solid {t['border']};padding:.48rem .7rem;border-radius:999px}}
+.agri-hero-art{{position:absolute;z-index:1;right:0;bottom:0;width:43%;height:100%;overflow:hidden;background:linear-gradient(180deg,transparent 25%,{t['soft']} 100%);opacity:.95}}
+.agri-sun{{position:absolute;right:22%;top:12%;width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#F7D98A,#E9B95E);opacity:.8;box-shadow:0 0 0 18px rgba(232,190,99,.10),0 0 0 38px rgba(232,190,99,.06)}}
+.agri-field{{position:absolute;left:-10%;width:125%;border-radius:50% 50% 0 0 / 30% 30% 0 0;transform:rotate(-7deg)}}
+.field-back{{height:43%;bottom:15%;background:linear-gradient(90deg,#A7C78F,#6F9E69);opacity:.48}}
+.field-mid{{height:37%;bottom:4%;background:repeating-linear-gradient(105deg,transparent 0 17px,rgba(255,255,255,.16) 18px 20px),linear-gradient(90deg,#6E9C62,#39784B);opacity:.8}}
+.field-front{{height:29%;bottom:-12%;background:repeating-linear-gradient(105deg,transparent 0 14px,rgba(255,255,255,.18) 15px 17px),linear-gradient(90deg,#477B4A,#205D3B)}}
+.agri-stalk{{position:absolute;z-index:2;font-size:3rem;filter:drop-shadow(0 5px 6px rgba(25,65,35,.15))}}
+.stalk-one{{right:23%;bottom:28%;font-size:4.4rem;transform:rotate(-9deg)}}.stalk-two{{right:8%;bottom:18%;font-size:3.6rem;transform:rotate(10deg)}}.stalk-three{{right:39%;bottom:14%;font-size:2.9rem}}
+.agri-section-intro{{display:flex;justify-content:space-between;align-items:end;gap:1rem;margin:0 0 .9rem}}
+.agri-section-intro h2{{margin:0;font-size:1.45rem}}
+.agri-section-intro p{{color:{t['muted']};font-size:.86rem;margin:0 0 .15rem}}
+.agri-feature-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin:0 0 1.6rem}}
+.agri-feature{{display:flex;align-items:center;gap:.85rem;padding:1rem;border-radius:15px;border:1px solid {t['border']};background:{t['panel']};box-shadow:0 4px 15px rgba(20,50,35,.035);transition:transform .18s ease,box-shadow .18s ease}}
+.agri-feature:hover{{transform:translateY(-2px);box-shadow:0 8px 20px rgba(20,50,35,.08)}}
+.agri-feature-icon{{display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:13px;background:{t['soft']};font-size:1.35rem}}
+.agri-feature b{{display:block;color:{t['text']};font-size:.92rem;margin-bottom:.2rem}}
+.agri-feature small{{display:block;color:{t['muted']};font-size:.76rem;line-height:1.45}}
+
 .hero h1{{font-size:clamp(1.65rem,3vw,2.25rem);font-weight:800;letter-spacing:-.045em;margin:0 0 .35rem}}
 .hero p{{font-size:1rem;line-height:1.55;max-width:850px;margin:0;color:{t['muted']}}}
 .metric-card{{border-radius:17px;padding:1.05rem 1.1rem;box-shadow:0 5px 18px rgba(20,50,35,.045);transition:transform .18s ease,box-shadow .18s ease}}
@@ -57,7 +83,8 @@ hr{{margin:1.35rem 0}}
 ::selection{{background:{t['soft']};color:{t['text']}}}
 ::-webkit-scrollbar{{width:9px;height:9px}}
 ::-webkit-scrollbar-thumb{{background:{t['border']};border-radius:10px}}
-@media(max-width:768px){{.block-container{{padding-left:1rem;padding-right:1rem;padding-top:1rem}}.hero{{padding:1.25rem;border-radius:17px}}.metric-card{{min-height:90px;padding:.85rem}}}}
+@media(max-width:768px){{.block-container{{padding-left:1rem;padding-right:1rem;padding-top:1rem}}.hero{{padding:1.25rem;border-radius:17px}}.metric-card{{min-height:90px;padding:.85rem}}.agri-hero{{min-height:330px;padding:1.35rem;border-radius:18px;align-items:flex-start}}.agri-hero-art{{width:100%;height:46%;opacity:.65}}.agri-hero-copy{{max-width:100%}}.agri-feature-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.agri-section-intro{{display:block}}.agri-section-intro p{{margin-top:.4rem}}}}
+@media(max-width:480px){{.agri-feature-grid{{grid-template-columns:1fr}}.agri-hero h1{{font-size:2rem}}.agri-tags span{{font-size:.7rem}}}}
 </style>''',unsafe_allow_html=True)
 def metric(label,value,note=''):
  st.markdown(f'<div class="metric-card"><div class="metric-label">{label}</div><div class="metric-value">{value}</div><div class="metric-label">{note}</div></div>',unsafe_allow_html=True)
@@ -136,7 +163,29 @@ with st.sidebar:
  if theme!=st.session_state.theme: st.session_state.theme=theme; st.rerun()
  st.caption('Free-data-first • No paid API keys')
 if page=='Overview':
- st.markdown('<div class="hero"><h1>🌱 AgriNova AI</h1><p>AI-powered agricultural intelligence for healthier crops and better farming decisions.</p></div>',unsafe_allow_html=True)
+ st.markdown("""
+ <section class="agri-hero">
+   <div class="agri-hero-copy">
+     <div class="agri-eyebrow">🌾 GLOBAL AGRICULTURAL INTELLIGENCE</div>
+     <h1>Grow with better<br><span>agricultural insight.</span></h1>
+     <p>Bring crop health, climate, soil and spatial evidence together to support smarter, more resilient farming decisions.</p>
+     <div class="agri-tags"><span>🌱 Crop intelligence</span><span>🌦️ Climate insights</span><span>🧪 Soil evidence</span></div>
+   </div>
+   <div class="agri-hero-art" aria-hidden="true">
+     <div class="agri-sun"></div><div class="agri-field field-back"></div><div class="agri-field field-mid"></div><div class="agri-field field-front"></div>
+     <div class="agri-stalk stalk-one">🌾</div><div class="agri-stalk stalk-two">🌿</div><div class="agri-stalk stalk-three">🌱</div>
+   </div>
+ </section>
+ <div class="agri-section-intro"><div><div class="agri-kicker">YOUR FARM INTELLIGENCE WORKSPACE</div><h2>One platform. Multiple perspectives.</h2></div><p>Explore the signals that shape agricultural productivity.</p></div>
+ <div class="agri-feature-grid">
+   <div class="agri-feature"><div class="agri-feature-icon">🌿</div><div><b>Crop health</b><small>Screen symptoms and explore practical next steps.</small></div></div>
+   <div class="agri-feature"><div class="agri-feature-icon">🌦️</div><div><b>Weather & climate</b><small>Understand local forecasts and historical conditions.</small></div></div>
+   <div class="agri-feature"><div class="agri-feature-icon">🌱</div><div><b>Crop planning</b><small>Build evidence-led crop and farm profiles.</small></div></div>
+   <div class="agri-feature"><div class="agri-feature-icon">🗺️</div><div><b>Spatial evidence</b><small>Explore mapped observations and farm boundaries.</small></div></div>
+   <div class="agri-feature"><div class="agri-feature-icon">🧪</div><div><b>Soil health</b><small>Interpret soil indicators and laboratory results.</small></div></div>
+   <div class="agri-feature"><div class="agri-feature-icon">📚</div><div><b>Plant knowledge</b><small>Find general plant-care and species references.</small></div></div>
+ </div>
+ """, unsafe_allow_html=True)
  location = global_location_picker("overview")
  crop=crop_plant_picker('overview', 'Crop or plant focus')
  w = get_weather(location["latitude"], location["longitude"]) if location else None
