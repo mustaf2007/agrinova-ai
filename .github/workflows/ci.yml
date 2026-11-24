@@ -214,7 +214,7 @@ jobs:
           assert raster_summary["minimum_cg_kg"] >= 1
           assert raster_summary["maximum_cg_kg"] <= 16
           assert raster_summary["median_cg_kg"] >= raster_summary["minimum_cg_kg"]
-          assert raster_summary["clipped_geotiff"].startswith(b"II*\\x00") or raster_summary["clipped_geotiff"].startswith(b"MM\\x00*")
+          assert raster_summary["clipped_geotiff"][:4] in (bytes((73, 73, 42, 0)), bytes((77, 77, 0, 42)))
           fake_error_response = SimpleNamespace(
               headers={"Content-Type": "text/xml"},
               raise_for_status=lambda: None,
