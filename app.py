@@ -7,6 +7,7 @@ from modules.data_sources import get_weather, get_historical_climate, search_glo
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
 from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
+from modules.crop_suitability import assess_crop_environment
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -291,6 +292,12 @@ elif page=='Crop Planner':
     st.caption(f"ECOCROP species record ID: {eco.get('ecoportcode', 'not supplied')} · [FAO ECOCROP](https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id={eco.get('ecoportcode', '')})")
     st.caption('Source data: FAO ECOCROP database, distributed through the CGIAR Climate Action Data Hub (CC BY 4.0).')
     st.warning('These are expert-compiled ecological reference values, not measured conditions at this farm or validated cultivar-specific thresholds. Missing fields remain unavailable. Annual rainfall values must not be compared directly with the 7-day forecast.')
+    st.markdown('**Evidence-based environment checks**')
+    observed_mean_temp = float(historical['T2M'].mean()) if historical is not None and not historical.empty else None
+    environment_checks = assess_crop_environment(eco, observed_mean_temp, soil_ph if soil_ph > 0 else None)
+    st.dataframe(pd.DataFrame(environment_checks), use_container_width=True, hide_index=True)
+    st.caption('No overall suitability score is calculated. Temperature comparison uses the recent historical period shown above, not a full growing season. Soil pH is compared only when a value is supplied and ECOCROP provides an absolute range.')
+    st.info('Annual rainfall requirements are not compared with the approximately 90-day NASA POWER record or the 7-day forecast. A valid rainfall comparison requires a matching long-term annual or crop-season climate baseline.')
     if soil_ph > 0:
      ph_min, ph_max = eco.get('phmin'), eco.get('phmax')
      ph_opt_min, ph_opt_max = eco.get('phopmn'), eco.get('phopmx')
