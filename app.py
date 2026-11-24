@@ -267,6 +267,7 @@ elif page=='Crop Planner':
     ]
     st.dataframe(pd.DataFrame(eco_rows), use_container_width=True, hide_index=True)
     st.caption(f"ECOCROP species record ID: {eco.get('ecoportcode', 'not supplied')} · [FAO ECOCROP](https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id={eco.get('ecoportcode', '')})")
+    st.caption('Source data: FAO ECOCROP database, distributed through the CGIAR Climate Action Data Hub (CC BY 4.0).')
     st.warning('These are expert-compiled ecological reference values, not measured conditions at this farm or validated cultivar-specific thresholds. Missing fields remain unavailable. Annual rainfall values must not be compared directly with the 7-day forecast.')
     if soil_ph > 0:
      ph_min, ph_max = eco.get('phmin'), eco.get('phmax')
