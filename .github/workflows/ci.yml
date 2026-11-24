@@ -27,6 +27,7 @@ jobs:
         run: |
           python - <<'PY'
           from modules.reporting import build_farm_report_csv, build_farm_report_pdf
+          from modules.agronomy import assess_soil
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -46,5 +47,11 @@ jobs:
           assert b"2026-11-10" in csv_data
           assert pdf_data.startswith(b"%PDF-")
           assert len(pdf_data) > 1000
-          print("PDF and CSV report exports passed.")
+          soil_missing = assess_soil(None, None, None, None, None, None, "Maize")
+          assert len(soil_missing) == 1
+          assert soil_missing[0][0] == "Crop context"
+          soil_ph_only = assess_soil(6.8, None, None, None, None, None, "Maize")
+          assert any(label == "Soil reaction" for label, _ in soil_ph_only)
+          assert not any(label == "Organic matter" for label, _ in soil_ph_only)
+          print("PDF/CSV exports and missing-soil-measurement checks passed.")
           PY
