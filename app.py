@@ -652,11 +652,14 @@ elif page=='Spatial Evidence Explorer':
        st.session_state['soilgrids_geotiff_bytes'] = raster_bytes
        st.session_state['soilgrids_geotiff_name'] = selected_coverage.replace('.', '_') + '.tif'
        st.session_state['soilgrids_geotiff_coverage'] = selected_coverage
+       st.session_state['soilgrids_geotiff_bounds'] = boundary_bounds
        st.session_state['soilgrids_geotiff_error'] = None
      except Exception as error:
       st.session_state['soilgrids_geotiff_bytes'] = None
       st.session_state['soilgrids_geotiff_error'] = str(error)
-    if st.session_state.get('soilgrids_geotiff_bytes') and st.session_state.get('soilgrids_geotiff_coverage') == selected_coverage:
+    if (st.session_state.get('soilgrids_geotiff_bytes')
+        and st.session_state.get('soilgrids_geotiff_coverage') == selected_coverage
+        and st.session_state.get('soilgrids_geotiff_bounds') == boundary_bounds):
      st.success(f"GeoTIFF received ({len(st.session_state['soilgrids_geotiff_bytes']):,} bytes).")
      st.download_button(
       'Download SoilGrids nitrogen GeoTIFF',
