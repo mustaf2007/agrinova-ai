@@ -9,7 +9,7 @@ from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
 from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
 from modules.crop_suitability import assess_crop_environment, normalize_spatial_observations, validate_geojson_boundaries
-from modules.soilgrids_wcs import fetch_nitrogen_coverages, SOILGRIDS_NITROGEN_WCS, SOILGRIDS_WCS_DOCS
+from modules.soilgrids_wcs import fetch_nitrogen_coverages, fetch_nitrogen_geotiff, SOILGRIDS_NITROGEN_WCS, SOILGRIDS_WCS_DOCS
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -457,6 +457,8 @@ elif page=='Crop Planner':
    st.download_button('Download CSV data', data=build_farm_report_csv(report_data), file_name='agrinova_farm_intelligence_report.csv', mime='text/csv', use_container_width=True)
 elif page=='Spatial Evidence Explorer':
  mapped_spatial = None
+ valid_boundary = None
+ boundary_bounds = None
  st.markdown('<div class="hero"><h1>🗺️ Spatial Evidence Explorer</h1><p>Map farm or field observations and compare them with selected species-level ecological reference ranges.</p></div>',unsafe_allow_html=True)
  st.warning('This workspace maps coordinates and measurements supplied in your file. It does not automatically download or sample GAEZ or SoilGrids raster cells. Do not treat the map as a validated crop-suitability classification.')
  crop_name = st.text_input('Crop or plant name for ECOCROP lookup', placeholder='e.g. maize, sorghum, sesame')
@@ -636,11 +638,42 @@ elif page=='Spatial Evidence Explorer':
   st.warning(f"Live WCS metadata could not be retrieved: {st.session_state['soilgrids_wcs_error']}. The service may be temporarily unavailable; use the official documentation and map links below.")
  else:
   st.info('Run the check to retrieve current coverage metadata from ISRIC. Availability is not assumed.')
+ if st.session_state.get('soilgrids_wcs_coverages'):
+  available_nitrogen = [item for item in st.session_state['soilgrids_wcs_coverages'] if item.startswith('nitrogen_')]
+  if available_nitrogen:
+   selected_coverage = st.selectbox('Select nitrogen coverage', available_nitrogen, key='soilgrids_nitrogen_coverage')
+   st.caption('Choose a depth interval and prediction layer. Median, mean and uncertainty layers are distinct modeled outputs.')
+   if valid_boundary is not None and boundary_bounds is not None:
+    st.caption('The request uses the bounding rectangle of the uploaded GeoJSON boundary, not an exact polygon clip. Keep the boundary extent small; the interactive limit is 0.25° in each direction.')
+    if st.button('Request SoilGrids GeoTIFF for this boundary extent', key='request_soilgrids_geotiff'):
+     try:
+      with st.spinner('Requesting a bounded GeoTIFF subset from ISRIC...'):
+       raster_bytes = fetch_nitrogen_geotiff(selected_coverage, boundary_bounds)
+       st.session_state['soilgrids_geotiff_bytes'] = raster_bytes
+       st.session_state['soilgrids_geotiff_name'] = selected_coverage.replace('.', '_') + '.tif'
+       st.session_state['soilgrids_geotiff_coverage'] = selected_coverage
+       st.session_state['soilgrids_geotiff_error'] = None
+     except Exception as error:
+      st.session_state['soilgrids_geotiff_bytes'] = None
+      st.session_state['soilgrids_geotiff_error'] = str(error)
+    if st.session_state.get('soilgrids_geotiff_bytes') and st.session_state.get('soilgrids_geotiff_coverage') == selected_coverage:
+     st.success(f"GeoTIFF received ({len(st.session_state['soilgrids_geotiff_bytes']):,} bytes).")
+     st.download_button(
+      'Download SoilGrids nitrogen GeoTIFF',
+      data=st.session_state['soilgrids_geotiff_bytes'],
+      file_name=st.session_state['soilgrids_geotiff_name'],
+      mime='image/tiff',
+      key='soilgrids_geotiff_download',
+     )
+    elif st.session_state.get('soilgrids_geotiff_error'):
+     st.warning(f"GeoTIFF request failed: {st.session_state['soilgrids_geotiff_error']}")
+   else:
+    st.info('Upload and validate a GeoJSON farm boundary before requesting a raster subset.')
  st.markdown(f"[Open official SoilGrids WCS documentation]({SOILGRIDS_WCS_DOCS}) · [Open nitrogen WCS endpoint]({SOILGRIDS_NITROGEN_WCS})")
- st.caption('The SoilGrids REST point-query API remains separate from WCS. This first integration discovers the nitrogen service only; it does not yet request GetCoverage GeoTIFFs, sample pixels or calculate farm-level statistics.')
+ st.caption('The SoilGrids REST point-query API remains separate from WCS. The integration can request a bounded nitrogen GeoTIFF for the uploaded boundary's bounding rectangle. It does not clip the raster to the exact polygon, sample pixels or calculate farm-level statistics.')
  st.markdown('**Preparing source data**')
  st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
- st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. Direct raster ingestion and automatic GAEZ / SoilGrids sampling are not yet implemented.')
+ st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. A bounded nitrogen GeoTIFF can be downloaded for a validated GeoJSON boundary extent. Exact polygon clipping, raster pixel interpretation, zonal statistics and other SoilGrids properties are not yet implemented.')
 elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Explore global modeled soil information and interpret your own laboratory measurements.</p></div>',unsafe_allow_html=True)
  st.subheader('Global modeled soil information')
