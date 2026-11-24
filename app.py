@@ -455,6 +455,7 @@ elif page=='Crop Planner':
   with dl2:
    st.download_button('Download CSV data', data=build_farm_report_csv(report_data), file_name='agrinova_farm_intelligence_report.csv', mime='text/csv', use_container_width=True)
 elif page=='Spatial Evidence Explorer':
+ mapped_spatial = None
  st.markdown('<div class="hero"><h1>🗺️ Spatial Evidence Explorer</h1><p>Map farm or field observations and compare them with selected species-level ecological reference ranges.</p></div>',unsafe_allow_html=True)
  st.warning('This workspace maps coordinates and measurements supplied in your file. It does not automatically download or sample GAEZ or SoilGrids raster cells. Do not treat the map as a validated crop-suitability classification.')
  crop_name = st.text_input('Crop or plant name for ECOCROP lookup', placeholder='e.g. maize, sorghum, sesame')
@@ -582,6 +583,26 @@ elif page=='Spatial Evidence Explorer':
      ) if valid_boundary['features'][0].get('properties') else None,
     ).add_to(boundary_map)
     boundary_map.fit_bounds(boundary_bounds)
+    if mapped_spatial is not None and not mapped_spatial.empty:
+     observation_layer = folium.FeatureGroup(name='Uploaded observation points', show=True)
+     for _, point in mapped_spatial.iterrows():
+      popup_text = (
+       f"Source row: {int(point['source_row'])}<br>"
+       f"Latitude: {point['latitude']:.5f}<br>"
+       f"Longitude: {point['longitude']:.5f}"
+      )
+      folium.CircleMarker(
+       location=[point['latitude'], point['longitude']],
+       radius=5,
+       color='#1976A8',
+       fill=True,
+       fill_color='#1976A8',
+       fill_opacity=0.85,
+       tooltip=f"Observation row {int(point['source_row'])}",
+       popup=folium.Popup(popup_text, max_width=280),
+      ).add_to(observation_layer)
+     observation_layer.add_to(boundary_map)
+    folium.LayerControl(collapsed=False).add_to(boundary_map)
     st.subheader('Uploaded farm boundary map')
     st_folium(boundary_map, height=520, width=1200, key='spatial_boundary_map')
     st.download_button(
@@ -596,7 +617,7 @@ elif page=='Spatial Evidence Explorer':
    st.error(f'Could not read the GeoJSON boundary file: {error}. Check that it is valid UTF-8 GeoJSON.')
  st.markdown('**Preparing source data**')
  st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
- st.caption('This first spatial workflow accepts point observations in CSV or Excel. Direct raster ingestion, automatic GAEZ/SoilGrids sampling and polygon-based farm boundaries are not yet implemented.')
+ st.caption('Spatial workflow: CSV / Excel point observations and GeoJSON Polygon / MultiPolygon boundaries are supported. When both are supplied, the boundary map can display them as separate layers. Direct raster ingestion and automatic GAEZ / SoilGrids sampling are not yet implemented.')
 elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Explore global modeled soil information and interpret your own laboratory measurements.</p></div>',unsafe_allow_html=True)
  st.subheader('Global modeled soil information')
