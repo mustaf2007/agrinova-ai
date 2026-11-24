@@ -7,7 +7,7 @@ from modules.data_sources import get_weather, get_historical_climate, search_glo
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
 from modules.reporting import build_farm_report_csv, build_farm_report_pdf
 from modules.soil_lab import MEASUREMENTS, OPTIONAL_FIELDS, normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
-from modules.crop_suitability import assess_crop_environment
+from modules.crop_suitability import assess_crop_environment, normalize_spatial_observations
 
 st.set_page_config(page_title='AgriNova AI | Agricultural Intelligence', page_icon='🌱', layout='wide')
 THEMES = {
@@ -94,7 +94,7 @@ def global_location_picker(key, label="Search location worldwide"):
  return selected
 with st.sidebar:
  st.markdown('## 🌱 AgriNova AI'); st.caption('Agricultural Intelligence Platform'); st.divider()
- page=st.radio('WORKSPACE',['Overview','Crop Health Screening','Weather & Climate','Crop Planner','Soil Health','Agri Knowledge Assistant','Data Sources & Methodology'])
+ page=st.radio('WORKSPACE',['Overview','Crop Health Screening','Weather & Climate','Crop Planner','Spatial Evidence Explorer','Soil Health','Agri Knowledge Assistant','Data Sources & Methodology'])
  st.divider(); theme=st.selectbox('Appearance theme',list(THEMES),index=list(THEMES).index(st.session_state.theme))
  if theme!=st.session_state.theme: st.session_state.theme=theme; st.rerun()
  st.caption('Free-data-first • No paid API keys')
@@ -453,6 +453,101 @@ elif page=='Crop Planner':
    st.download_button('Download PDF report', data=build_farm_report_pdf(report_data), file_name='agrinova_farm_intelligence_report.pdf', mime='application/pdf', use_container_width=True)
   with dl2:
    st.download_button('Download CSV data', data=build_farm_report_csv(report_data), file_name='agrinova_farm_intelligence_report.csv', mime='text/csv', use_container_width=True)
+elif page=='Spatial Evidence Explorer':
+ st.markdown('<div class="hero"><h1>🗺️ Spatial Evidence Explorer</h1><p>Map farm or field observations and compare them with selected species-level ecological reference ranges.</p></div>',unsafe_allow_html=True)
+ st.warning('This workspace maps coordinates and measurements supplied in your file. It does not automatically download or sample GAEZ or SoilGrids raster cells. Do not treat the map as a validated crop-suitability classification.')
+ crop_name = st.text_input('Crop or plant name for ECOCROP lookup', placeholder='e.g. maize, sorghum, sesame')
+ eco_record = None
+ if len(crop_name.strip()) >= 2:
+  with st.spinner('Searching the ECOCROP species reference...'):
+   spatial_eco_matches = search_ecocrop(crop_name)
+  if spatial_eco_matches:
+   eco_options = {record['_display']: record for record in spatial_eco_matches}
+   eco_label = st.selectbox('Confirm species reference', list(eco_options), key='spatial_eco_species')
+   eco_record = eco_options[eco_label]
+   st.caption(f"Species-level reference: {eco_record.get('scientificname', 'Scientific name not listed')}. This is not a cultivar-specific profile.")
+  else:
+   st.info('No matching ECOCROP record was returned. Coordinates can still be mapped, but ecological comparisons will not be shown.')
+ spatial_file = st.file_uploader('Upload geospatial observations (CSV or Excel)', type=['csv','xlsx'], key='spatial_observations_file')
+ if spatial_file is not None:
+  try:
+   if spatial_file.name.lower().endswith('.xlsx'):
+    spatial_book = pd.ExcelFile(spatial_file)
+    spatial_sheet = st.selectbox('Select worksheet', spatial_book.sheet_names, key='spatial_observations_sheet')
+    spatial_frame = pd.read_excel(spatial_book, sheet_name=spatial_sheet)
+   else:
+    spatial_file.seek(0)
+    spatial_frame = pd.read_csv(spatial_file)
+   if spatial_frame.empty:
+    st.warning('The uploaded file contains no records.')
+   else:
+    st.caption(f'Loaded {len(spatial_frame):,} rows. Map the coordinate columns and any available environmental measurements.')
+    st.dataframe(spatial_frame.head(8), use_container_width=True, hide_index=True)
+    spatial_columns = ['— Not mapped —'] + [str(column) for column in spatial_frame.columns]
+    coord1, coord2 = st.columns(2)
+    with coord1:
+     lat_col = st.selectbox('Latitude column (required)', spatial_columns, key='spatial_lat_col')
+     temp_col = st.selectbox('Mean temperature column in °C (optional)', spatial_columns, key='spatial_temp_col')
+    with coord2:
+     lon_col = st.selectbox('Longitude column (required)', spatial_columns, key='spatial_lon_col')
+     ph_col = st.selectbox('Soil pH column (optional)', spatial_columns, key='spatial_ph_col')
+    if lat_col != '— Not mapped —' and lon_col != '— Not mapped —':
+     mapped_spatial, spatial_warnings = normalize_spatial_observations(
+      spatial_frame, lat_col, lon_col,
+      temp_col if temp_col != '— Not mapped —' else None,
+      ph_col if ph_col != '— Not mapped —' else None,
+     )
+     for warning in spatial_warnings:
+      st.warning(warning)
+     if not mapped_spatial.empty:
+      st.success(f"Validated {len(mapped_spatial):,} georeferenced record(s).")
+      if eco_record is not None:
+       point_results = []
+       for _, point in mapped_spatial.iterrows():
+        checks = assess_crop_environment(
+         eco_record,
+         point.get('mean_temperature_c'),
+         point.get('soil_ph'),
+        )
+        for check in checks:
+         point_results.append({
+          'Source row': int(point['source_row']),
+          'Latitude': point['latitude'],
+          'Longitude': point['longitude'],
+          **check,
+         })
+       comparison_frame = pd.DataFrame(point_results)
+       st.markdown('**Point-level ecological reference checks**')
+       st.dataframe(comparison_frame, use_container_width=True, hide_index=True)
+       st.caption('Each indicator is assessed separately. Temperature observations must represent a period comparable to the crop requirement; short-window means are contextual only. Soil pH interpretation depends on sampling and laboratory method.')
+      map_center = [mapped_spatial['latitude'].mean(), mapped_spatial['longitude'].mean()]
+      spatial_map = folium.Map(location=map_center, zoom_start=5, control_scale=True)
+      for _, point in mapped_spatial.iterrows():
+       details = [f"Source row: {int(point['source_row'])}", f"Coordinates: {point['latitude']:.5f}, {point['longitude']:.5f}"]
+       if pd.notna(point.get('mean_temperature_c')):
+        details.append(f"Mean temperature: {point['mean_temperature_c']:.1f} °C")
+       if pd.notna(point.get('soil_ph')):
+        details.append(f"Soil pH: {point['soil_ph']:.1f}")
+       if eco_record is not None:
+        checks = assess_crop_environment(eco_record, point.get('mean_temperature_c'), point.get('soil_ph'))
+        details.extend([f"{check['Indicator']}: {check['Comparison']}" for check in checks])
+       folium.CircleMarker(
+        location=[point['latitude'], point['longitude']],
+        radius=6, color='#16845B', fill=True, fill_color='#16845B',
+        fill_opacity=0.75, tooltip=f"Record {int(point['source_row'])}",
+        popup=folium.Popup('<br>'.join(details), max_width=320),
+       ).add_to(spatial_map)
+      st.subheader('Mapped observation points')
+      st_folium(spatial_map, height=520, use_container_width=True, key='spatial_evidence_map')
+      st.caption('Map markers show supplied observation coordinates only. Marker color does not indicate suitability, risk or crop performance.')
+      st.download_button('Download validated spatial observations (CSV)', data=mapped_spatial.to_csv(index=False).encode('utf-8-sig'), file_name='agrinova_validated_spatial_observations.csv', mime='text/csv', key='spatial_observations_download')
+    else:
+     st.info('Select valid latitude and longitude columns to validate and map records.')
+  except (ValueError, OSError, ImportError, UnicodeDecodeError, pd.errors.ParserError) as error:
+   st.error(f'Could not read the uploaded geospatial file: {error}. Check the CSV or Excel format.')
+ st.markdown('**Preparing source data**')
+ st.markdown('- Export point or sample data from your GIS workflow with latitude and longitude columns.\n- GAEZ and SoilGrids downloads may be gridded raster data; convert or sample them using a GIS tool before uploading point observations.\n- Keep source names, units, depth, dates, spatial resolution and reference period with the dataset.\n- Do not combine measurements from different soil depths or incompatible laboratory methods as if they were equivalent.')
+ st.caption('This first spatial workflow accepts point observations in CSV or Excel. Direct raster ingestion, automatic GAEZ/SoilGrids sampling and polygon-based farm boundaries are not yet implemented.')
 elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Explore global modeled soil information and interpret your own laboratory measurements.</p></div>',unsafe_allow_html=True)
  st.subheader('Global modeled soil information')
