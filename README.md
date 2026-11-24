@@ -27,7 +27,7 @@ streamlit run app.py
 Connect this public repository to [Streamlit Community Cloud](https://share.streamlit.io/), select branch `main`, and main file `app.py`. No secrets are needed for the included location, weather and climate features.
 
 ## Important limitations
-Worldwide location search does not mean every agricultural dataset is complete for every country or location. Data coverage, spatial resolution, update frequency and license vary by source. Crop guidance is general and requires local agronomic validation. Crop health screening is symptom-based, not automated photo diagnosis. Soil interpretations are not laboratory results. Check source licenses and service terms before commercial reuse.
+Worldwide location search does not mean every agricultural dataset is complete for every country or location. Data coverage, spatial resolution, update frequency and license vary by source. Crop planning requires a selected farm location and variety/cultivar. Variety-specific planting, fertilizer, irrigation and yield recommendations are only shown when authoritative matching records are integrated; unavailable values are not guessed. Crop health screening is symptom-based, not automated photo diagnosis. Soil interpretations are not laboratory results. Check source licenses and service terms before commercial reuse.
 
 ## Data sources
 Open-Meteo and its Geocoding API, NASA POWER, FAOSTAT, SoilGrids, Copernicus, NASA Earthdata, PlantVillage, CGIAR, HDX and IPC. Check individual dataset/service terms and licenses before redistribution or commercial use.
