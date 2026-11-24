@@ -75,27 +75,33 @@ def get_crop_guidance(crop, region, season, farm_size):
     }
 
 def assess_soil(ph, organic, ec, nitrogen, phosphorus, potassium, crop):
+    """Interpret only supplied measurements; None means not tested."""
     out = []
-    if ph < 5.5:
-        out.append(("Soil reaction","Acidic range. Some crops may experience nutrient availability constraints; verify with a laboratory and seek locally recommended amendments."))
-    elif ph <= 7.5:
-        out.append(("Soil reaction","Within a commonly suitable pH range for many crops, though crop-specific tolerances vary."))
-    elif ph <= 8.5:
-        out.append(("Soil reaction","Alkaline range. Check micronutrient availability and irrigation-water quality."))
-    else:
-        out.append(("Soil reaction","Strongly alkaline. Specialist soil assessment is recommended before selecting amendments."))
-    if organic < 1:
-        out.append(("Organic matter","Low measured organic matter. Consider tested compost, residue retention, cover and rotations where feasible."))
-    elif organic < 3:
-        out.append(("Organic matter","Moderate-to-low range for many mineral soils. Build organic inputs where practical and monitor changes."))
-    else:
-        out.append(("Organic matter","Relatively higher organic matter for many mineral soils; maintain soil cover."))
-    if ec >= 4:
-        out.append(("Salinity indicator","May indicate salinity concern, but interpretation depends on test method (e.g. saturated paste ECe). Confirm the method."))
-    else:
-        out.append(("Salinity indicator","Entered EC is below the common 4 dS/m ECe threshold often used to flag saline soil; method differences matter."))
-    out.append(("Nutrients","N, P and K cannot be classified reliably without extraction method, units, soil texture and regional calibration. Use the laboratory's interpretation."))
-    out.append(("Crop context",f"Selected crop: {crop}. Do not infer fertilizer rates from these inputs alone."))
+    if ph is not None:
+        if ph < 5.5:
+            out.append(("Soil reaction", "Acidic range. Some crops may experience nutrient availability constraints; verify with a laboratory and seek locally recommended amendments."))
+        elif ph <= 7.5:
+            out.append(("Soil reaction", "Within a commonly suitable pH range for many crops, though crop-specific tolerances vary."))
+        elif ph <= 8.5:
+            out.append(("Soil reaction", "Alkaline range. Check micronutrient availability and irrigation-water quality."))
+        else:
+            out.append(("Soil reaction", "Strongly alkaline. Specialist soil assessment is recommended before selecting amendments."))
+    if organic is not None:
+        if organic < 1:
+            out.append(("Organic matter", "Low measured organic matter. Consider tested compost, residue retention, cover and rotations where feasible."))
+        elif organic < 3:
+            out.append(("Organic matter", "Moderate-to-low range for many mineral soils. Build organic inputs where practical and monitor changes."))
+        else:
+            out.append(("Organic matter", "Relatively higher organic matter for many mineral soils; maintain soil cover."))
+    if ec is not None:
+        if ec >= 4:
+            out.append(("Salinity indicator", "May indicate salinity concern, but interpretation depends on test method (e.g. saturated paste ECe). Confirm the method."))
+        else:
+            out.append(("Salinity indicator", "Entered EC is below the common 4 dS/m ECe threshold often used to flag saline soil; method differences matter. Confirm that the laboratory method is comparable to ECe."))
+    nutrient_values = [value for value in (nitrogen, phosphorus, potassium) if value is not None]
+    if nutrient_values:
+        out.append(("Nutrients", "N, P and K values were recorded, but cannot be classified reliably without extraction method, units, soil texture and regional calibration. Use the laboratory's interpretation."))
+    out.append(("Crop context", f"Selected crop: {crop}. Do not infer fertilizer rates from these inputs alone."))
     return out
 
 def screen_crop_symptoms(crop, symptoms, plant_part, conditions):
