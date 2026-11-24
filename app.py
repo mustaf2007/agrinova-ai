@@ -243,8 +243,11 @@ elif page=='Crop Planner':
     with h1: metric('Mean daily temperature', f"{historical['T2M'].mean():.1f} °C")
     with h2: metric('Accumulated precipitation', f"{historical['PRECTOTCORR'].sum():.1f} mm")
     with h3: metric('Valid data days', f"{len(historical):,}")
-    climate_chart = historical.set_index('date')[['T2M', 'PRECTOTCORR']]
-    st.line_chart(climate_chart, use_container_width=True)
+    climate_chart = historical.set_index('date')
+    st.markdown('**Daily mean temperature (°C)**')
+    st.line_chart(climate_chart[['T2M']], use_container_width=True)
+    st.markdown('**Daily precipitation (mm/day)**')
+    st.bar_chart(climate_chart[['PRECTOTCORR']], use_container_width=True)
     st.caption(f"Returned observations: {historical['date'].min().date()} to {historical['date'].max().date()}. Precipitation is the sum of returned daily NASA POWER values; missing or invalid days are not imputed.")
    else:
     st.info('NASA POWER did not return usable historical daily values for this point and period. No historical climate summary is displayed.')
