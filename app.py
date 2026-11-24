@@ -97,20 +97,53 @@ elif page=='Weather & Climate':
   else: st.info('Historical data not currently returned by NASA POWER.')
  else: st.info('Worldwide mode is active. Search a city, region or country above to load its forecast. If you already selected a location, check internet connectivity.')
 elif page=='Crop Planner':
- st.markdown('<div class="hero"><h1>🌾 Crop Planning</h1><p>Crop-specific general guidance and planning considerations.</p></div>',unsafe_allow_html=True)
- region = global_location_picker("planner", "Search farm location worldwide (optional)")
- a,b=st.columns(2)
- with a: crop=crop_plant_picker('planner', 'Crop or plant')
- with b: area=st.number_input('Farm size (hectares)',min_value=.01,value=1.0,step=.5); season=st.selectbox('Season',['Main rainy season','Short rainy season','Dry / irrigated season','Not sure'])
- region_name = region["label"] if region else "Global / location not specified"
- g=get_crop_guidance(crop,region_name,season,area); a,b,c=st.columns(3)
- with a: metric('Crop',crop)
- with b: metric('Water demand',g['water'])
- with c: metric('Growing duration',g['duration'])
- st.subheader('Practical guidance')
- for item in g['guidance']: st.markdown('- '+item)
- st.subheader('Planning considerations')
- for item in g['cautions']: st.markdown('- '+item)
+ st.markdown('<div class="hero"><h1>🌾 Crop Planning</h1><p>Build a crop-specific planning record using the actual farm location and cultivar.</p></div>',unsafe_allow_html=True)
+ st.info('Farm location and crop variety are required. Recommendations must be supported by crop- and location-specific evidence; unsupported values are not guessed.')
+ region = global_location_picker("planner", "Search and select the farm location (required)")
+ with st.form('crop_planner'):
+  a,b=st.columns(2)
+  with a:
+   crop=crop_plant_picker('planner', 'Crop or plant (required)')
+   variety=st.text_input('Crop variety / cultivar (required)',placeholder='Enter the exact variety name, or type “Unknown” only if not identified')
+   area=st.number_input('Farm size (hectares)',min_value=.01,value=1.0,step=.5)
+  with b:
+   season=st.selectbox('Production season',['Main rainy season','Short rainy season','Dry / irrigated season','Year-round / perennial','Not sure'])
+   system=st.selectbox('Production system',['Rainfed','Irrigated','Rainfed and supplementary irrigation','Protected cultivation','Not sure'])
+   soil_ph=st.number_input('Soil pH (optional; enter 0 if not tested)',min_value=0.0,max_value=14.0,value=0.0,step=.1)
+  submitted=st.form_submit_button('Build crop planning profile',use_container_width=True)
+ if submitted:
+  if not region:
+   st.error('Search for and select the actual farm location before generating the planning profile.')
+  elif not crop.strip() or crop == 'Custom crop / plant':
+   st.error('Enter a specific crop or plant name.')
+  elif not variety.strip():
+   st.error('Enter the crop variety or cultivar. If it is genuinely unknown, enter “Unknown”; variety-specific recommendations will then be withheld.')
+  else:
+   weather=get_weather(region['latitude'],region['longitude'])
+   st.subheader('Farm and crop profile')
+   p1,p2,p3,p4=st.columns(4)
+   with p1: metric('Crop / plant',crop)
+   with p2: metric('Variety / cultivar',variety)
+   with p3: metric('Farm location',region['label'])
+   with p4: metric('Farm size',f'{area:g} ha')
+   st.write(f"**Production season:** {season}  |  **Production system:** {system}")
+   if soil_ph > 0: st.write(f'**Reported soil pH:** {soil_ph:.1f}')
+   if weather:
+    st.subheader('Observed planning context')
+    w1,w2,w3=st.columns(3)
+    with w1: metric('Current temperature',f"{weather['current_temp']} °C" if weather.get('current_temp') is not None else 'Not returned')
+    with w2: metric('Relative humidity',f"{weather['humidity']}%" if weather.get('humidity') is not None else 'Not returned')
+    with w3: metric('Forecast rainfall (7 days)',f"{weather['rain_7d']} mm")
+    st.caption('Weather values describe the selected location and forecast period. They are not crop-specific thresholds or a planting recommendation.')
+   else:
+    st.warning('Live weather could not be retrieved for this location.')
+   st.subheader('Agronomic evidence and recommendation status')
+   st.warning('AgriNova AI does not yet have a verified, variety-specific agronomic record for every crop and location. It will not invent planting dates, spacing, seed rates, fertilizer doses, irrigation schedules, maturity periods or yield estimates.')
+   st.markdown('For a defensible recommendation, the selected crop and variety must be matched against an authoritative country or agroecological-zone record. Start with these references:')
+   st.markdown('- [FAO Crop Calendar](https://cropcalendar.apps.fao.org/) — country- and agroecological-zone-specific planting and harvesting periods and crop practices where records exist.')
+   st.markdown('- [FAO ECOCROP / GAEZ](https://gaez.fao.org/pages/ecocrop) — ecological requirements for thousands of plant species; not a substitute for cultivar-specific management guidance.')
+   st.markdown('- [FAO AQUASTAT irrigated crop calendars](https://www.fao.org/aquastat/en/databases/crop-calendar/) — historical country-level irrigated crop calendar information where available.')
+   st.info('The next data integration step is to connect these source records to this crop, cultivar and location profile. Until then, detailed agronomic fields should be treated as unavailable rather than filled with generic advice.')
 elif page=='Soil Health':
  st.markdown('<div class="hero"><h1>🧪 Soil Health</h1><p>Interpret soil measurements supplied by the user.</p></div>',unsafe_allow_html=True)
  st.info('Use laboratory or field-test results. The app does not invent missing measurements or fertilizer rates.')
