@@ -103,7 +103,18 @@ def search_global_locations(query: str, count: int = 10):
                 continue
             parts = [item.get("name"), item.get("admin1"), item.get("country")]
             label = ", ".join(dict.fromkeys(str(part) for part in parts if part))
-            locations.append({"label": label, "name": item.get("name", "Unknown"), "country": item.get("country", ""), "latitude": float(item["latitude"]), "longitude": float(item["longitude"])})
+            locations.append({
+                "label": label,
+                "name": item.get("name", "Unknown"),
+                "country": item.get("country", ""),
+                "country_code": item.get("country_code", ""),
+                "admin1": item.get("admin1", ""),
+                "admin2": item.get("admin2", ""),
+                "feature_code": item.get("feature_code", ""),
+                "population": item.get("population"),
+                "latitude": float(item["latitude"]),
+                "longitude": float(item["longitude"]),
+            })
         return locations
     except (requests.RequestException, ValueError, KeyError, TypeError):
         return []
