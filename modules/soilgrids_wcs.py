@@ -130,3 +130,117 @@ def fetch_nitrogen_geotiff(
     if not is_tiff or ("xml" in content_type and "tiff" not in content_type):
         raise ValueError("The WCS response was not a valid GeoTIFF. The service may have returned an OGC exception.")
     return payload
+
+
+
+def analyze_nitrogen_geotiff(
+    raster_bytes: bytes,
+    boundary_geojson: dict,
+    all_touched: bool = False,
+) -> dict:
+    """Clip a SoilGrids nitrogen raster to GeoJSON polygons and summarize valid pixels.
+
+    Returns descriptive statistics in the source layer's cg/kg units, coverage
+    counts, raster metadata, and an exact-polygon-clipped GeoTIFF. This is a
+    summary of modeled SoilGrids pixels, not a laboratory measurement.
+    """
+    import io
+    import numpy as np
+    import rasterio
+    from rasterio.mask import mask
+    from rasterio.warp import transform_geom
+
+    if not isinstance(raster_bytes, (bytes, bytearray)) or not raster_bytes:
+        raise ValueError("A non-empty GeoTIFF byte stream is required.")
+    if not isinstance(boundary_geojson, dict):
+        raise ValueError("A validated GeoJSON boundary is required.")
+    if boundary_geojson.get("type") == "FeatureCollection":
+        features = boundary_geojson.get("features", [])
+    elif boundary_geojson.get("type") == "Feature":
+        features = [boundary_geojson]
+    else:
+        raise ValueError("Boundary must be a GeoJSON Feature or FeatureCollection.")
+
+    geometries = []
+    for feature in features:
+        geometry = feature.get("geometry") if isinstance(feature, dict) else None
+        if not isinstance(geometry, dict) or geometry.get("type") not in {"Polygon", "MultiPolygon"}:
+            continue
+        geometries.append(geometry)
+    if not geometries:
+        raise ValueError("No Polygon or MultiPolygon geometries were found.")
+
+    try:
+        with rasterio.io.MemoryFile(bytes(raster_bytes)) as memory_file:
+            with memory_file.open() as dataset:
+                if dataset.count < 1 or dataset.crs is None:
+                    raise ValueError("The GeoTIFF must contain at least one band and a defined CRS.")
+                if dataset.width * dataset.height > 25_000_000:
+                    raise ValueError("Raster dimensions exceed the interactive processing limit.")
+                transformed = [
+                    transform_geom("EPSG:4326", dataset.crs, geometry, precision=-1)
+                    for geometry in geometries
+                ]
+                clipped, transform = mask(
+                    dataset,
+                    transformed,
+                    all_touched=all_touched,
+                    crop=True,
+                    filled=False,
+                    indexes=1,
+                )
+                raw = np.asarray(clipped.data)
+                masked = np.ma.getmaskarray(clipped) | ~np.isfinite(raw)
+                values = raw[~masked].astype("float64")
+                inside_pixels = int(clipped.size - np.count_nonzero(np.ma.getmaskarray(clipped) & ~np.isfinite(raw))) if False else int(np.count_nonzero(~np.ma.getmaskarray(clipped)))
+                # Count polygon-selected pixels separately from valid raster cells.
+                from rasterio.mask import raster_geometry_mask
+                shape_mask, _, _ = raster_geometry_mask(
+                    dataset, transformed, all_touched=all_touched, crop=True
+                )
+                inside_pixels = int(np.count_nonzero(~shape_mask))
+                valid_pixels = int(values.size)
+                if inside_pixels == 0:
+                    raise ValueError("The uploaded polygon contains no raster pixel centres at this resolution.")
+                if valid_pixels == 0:
+                    raise ValueError("No valid SoilGrids pixels overlap the uploaded polygon.")
+                nodata_pixels = inside_pixels - valid_pixels
+
+                profile = dataset.profile.copy()
+                profile.update(
+                    driver="GTiff",
+                    height=clipped.shape[0],
+                    width=clipped.shape[1],
+                    count=1,
+                    transform=transform,
+                    compress="deflate",
+                    nodata=dataset.nodata if dataset.nodata is not None else -32768,
+                )
+                output = io.BytesIO()
+                export_array = np.ma.array(clipped, mask=np.ma.getmaskarray(clipped) | shape_mask)
+                with rasterio.io.MemoryFile() as output_memory:
+                    with output_memory.open(**profile) as writer:
+                        writer.write(export_array.filled(profile["nodata"]).astype(profile["dtype"]), 1)
+                    clipped_bytes = output_memory.read()
+
+                return {
+                    "pixel_count_inside_polygon": inside_pixels,
+                    "valid_pixel_count": valid_pixels,
+                    "nodata_pixel_count": nodata_pixels,
+                    "valid_coverage_pct": round(valid_pixels / inside_pixels * 100, 2),
+                    "mean_cg_kg": float(np.mean(values)),
+                    "median_cg_kg": float(np.median(values)),
+                    "minimum_cg_kg": float(np.min(values)),
+                    "maximum_cg_kg": float(np.max(values)),
+                    "std_cg_kg": float(np.std(values, ddof=0)),
+                    "q25_cg_kg": float(np.quantile(values, 0.25)),
+                    "q75_cg_kg": float(np.quantile(values, 0.75)),
+                    "raster_crs": str(dataset.crs),
+                    "raster_resolution": tuple(float(abs(v)) for v in dataset.res),
+                    "all_touched": bool(all_touched),
+                    "clipped_geotiff": clipped_bytes,
+                }
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(f"Could not interpret or clip the SoilGrids GeoTIFF: {error}") from error
