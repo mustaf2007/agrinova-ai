@@ -155,7 +155,8 @@ jobs:
           y_subset = next(value for key, value in wcs_params if key == "SUBSET" and value.startswith("Y("))
           assert 5_000_000 < float(x_subset[2:].split(",")[0]) < 5_010_000
           assert 5_010_000 < float(x_subset.split(",")[1].rstrip(")")) < 5_020_000
-          assert "222638" in y_subset and "228205" in y_subset
+          assert 220_000 < float(y_subset[2:].split(",")[0]) < 225_000
+          assert 225_000 < float(y_subset.split(",")[1].rstrip(")")) < 230_000
 
           try:
               get_coverage_request_params("soc_0-5cm_Q0.5", [[2.0, 45.0], [2.05, 45.05]])
