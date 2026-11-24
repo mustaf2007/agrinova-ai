@@ -54,3 +54,46 @@ def assess_crop_environment(record: dict | None, mean_temperature_c=None, soil_p
         "Interpretation": "Compare only after confirming the soil test method and representative sampling.",
     })
     return results
+
+
+def normalize_spatial_observations(
+    frame,
+    latitude_column: str,
+    longitude_column: str,
+    temperature_column: str | None = None,
+    soil_ph_column: str | None = None,
+):
+    """Validate user-supplied point observations for mapping.
+
+    Coordinates are required; environmental measurements are optional. This
+    does not sample raster cells or infer values from coordinates.
+    """
+    import pandas as pd
+
+    if frame is None or frame.empty:
+        return pd.DataFrame(), ["The uploaded dataset is empty."]
+    if latitude_column not in frame.columns or longitude_column not in frame.columns:
+        return pd.DataFrame(), ["Select valid latitude and longitude columns."]
+    output = pd.DataFrame(index=frame.index)
+    output["latitude"] = pd.to_numeric(frame[latitude_column], errors="coerce")
+    output["longitude"] = pd.to_numeric(frame[longitude_column], errors="coerce")
+    invalid_coordinates = (
+        output["latitude"].isna()
+        | output["longitude"].isna()
+        | ~output["latitude"].between(-90, 90)
+        | ~output["longitude"].between(-180, 180)
+    )
+    output["source_row"] = range(2, len(output) + 2)
+    if temperature_column and temperature_column in frame.columns:
+        output["mean_temperature_c"] = pd.to_numeric(frame[temperature_column], errors="coerce")
+    if soil_ph_column and soil_ph_column in frame.columns:
+        ph = pd.to_numeric(frame[soil_ph_column], errors="coerce")
+        output["soil_ph"] = ph.where(ph.between(0, 14))
+    output = output.loc[~invalid_coordinates].copy().reset_index(drop=True)
+    warnings = []
+    dropped = int(invalid_coordinates.sum())
+    if dropped:
+        warnings.append(f"{dropped} row(s) with missing or out-of-range coordinates were excluded.")
+    if output.empty:
+        warnings.append("No valid coordinate records remain.")
+    return output, warnings
