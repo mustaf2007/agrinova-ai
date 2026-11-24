@@ -169,14 +169,14 @@ jobs:
           fake_tiff_response = SimpleNamespace(
               headers={"Content-Type": "image/tiff"},
               raise_for_status=lambda: None,
-              iter_content=lambda chunk_size: [b"II*\\x00test-raster"],
+              iter_content=lambda chunk_size: [b"II*\x00test-raster"],
           )
           with patch("modules.soilgrids_wcs.requests.get", return_value=fake_tiff_response):
               raster_bytes = fetch_nitrogen_geotiff(
                   "nitrogen_0-5cm_Q0.5",
                   [[2.0, 45.0], [2.05, 45.05]],
               )
-          assert raster_bytes.startswith(b"II*\\x00")
+          assert raster_bytes.startswith(b"II*\x00")
           fake_error_response = SimpleNamespace(
               headers={"Content-Type": "text/xml"},
               raise_for_status=lambda: None,
