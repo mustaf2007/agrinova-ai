@@ -852,9 +852,10 @@ elif page=='Agri Knowledge Assistant':
   st.session_state['knowledge_search_query'] = q.strip()
   st.session_state['knowledge_search_category'] = category
   st.session_state['knowledge_search_results'] = search_knowledge(q, category) if q.strip() else []
+  st.session_state['knowledge_ecocrop_matches'] = search_ecocrop(q) if q.strip() else []
   st.session_state['knowledge_search_submitted'] = True
  if clear_clicked:
-  for key in ('knowledge_search_query','knowledge_search_category','knowledge_search_results','knowledge_search_submitted'):
+  for key in ('knowledge_search_query','knowledge_search_category','knowledge_search_results','knowledge_ecocrop_matches','knowledge_search_submitted'):
    st.session_state.pop(key, None)
  if st.session_state.get('knowledge_search_submitted'):
   submitted_query = st.session_state.get('knowledge_search_query', '')
@@ -864,16 +865,53 @@ elif page=='Agri Knowledge Assistant':
   elif submitted_category != category:
    st.info('The topic filter has changed. Run the search again to refresh the results.')
   else:
+   eco_matches = st.session_state.get('knowledge_ecocrop_matches', [])
+   if eco_matches:
+    st.markdown('**Species-level reference (FAO ECOCROP)**')
+    eco_options = {record['_display']: record for record in eco_matches}
+    selected_eco_label = st.selectbox('Confirm the plant species', list(eco_options), key='knowledge_ecocrop_species')
+    eco = eco_options[selected_eco_label]
+    def _knowledge_eco_value(value, unit=''):
+     if value is None or (isinstance(value, float) and pd.isna(value)):
+      return 'Not available'
+     if isinstance(value, (int, float)):
+      return f'{value:g}{unit}'
+     if isinstance(value, (list, tuple)):
+      return ', '.join(str(x) for x in value)
+     return str(value)
+    def _knowledge_eco_range(low, high, unit=''):
+     left = _knowledge_eco_value(eco.get(low), unit)
+     right = _knowledge_eco_value(eco.get(high), unit)
+     return f'{left} to {right}' if left != 'Not available' or right != 'Not available' else 'Not available'
+    eco_rows = [
+     {'Ecological indicator':'Optimal temperature range','ECOCROP reference':_knowledge_eco_range('topmn','topmx',' °C')},
+     {'Ecological indicator':'Absolute temperature limits','ECOCROP reference':_knowledge_eco_range('tmin','tmax',' °C')},
+     {'Ecological indicator':'Optimal annual rainfall','ECOCROP reference':_knowledge_eco_range('ropmn','ropmx',' mm/year')},
+     {'Ecological indicator':'Absolute annual rainfall limits','ECOCROP reference':_knowledge_eco_range('rmin','rmax',' mm/year')},
+     {'Ecological indicator':'Crop-cycle range','ECOCROP reference':_knowledge_eco_range('gmin','gmax',' days')},
+     {'Ecological indicator':'Optimal soil pH','ECOCROP reference':_knowledge_eco_range('phopmn','phopmx')},
+     {'Ecological indicator':'Absolute soil pH limits','ECOCROP reference':_knowledge_eco_range('phmin','phmax')},
+     {'Ecological indicator':'Preferred soil texture','ECOCROP reference':_knowledge_eco_value(eco.get('text'))},
+     {'Ecological indicator':'Climate zones','ECOCROP reference':_knowledge_eco_value(eco.get('cliz'))},
+    ]
+    st.success(f"Species record: {eco.get('scientificname', 'Scientific name not listed')}")
+    st.dataframe(pd.DataFrame(eco_rows), use_container_width=True, hide_index=True)
+    eco_id = eco.get('ecoportcode', '')
+    if eco_id:
+     st.caption(f"ECOCROP record ID: {eco_id} · [Open FAO ECOCROP species record](https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id={eco_id})")
+    st.caption('Source: FAO ECOCROP species reference, distributed through the CGIAR Climate Action Data Hub. These are expert-compiled ecological references, not farm measurements or cultivar-specific prescriptions. Missing values remain unavailable.')
+   else:
+    st.info('No matching species record was returned by ECOCROP for this query. General plant-care references may still be useful; the absence of a match does not mean the plant is unsupported by agriculture.')
    results = st.session_state.get('knowledge_search_results', [])
-   st.subheader('Search results')
+   st.subheader('General knowledge references')
    if results:
-    st.caption(f"{len(results)} relevant article(s) found for: {submitted_query}")
+    st.caption(f"{len(results)} general reference(s) related to: {submitted_query}. These are not species-specific unless explicitly stated.")
     for item in results:
      with st.expander(item['title'], expanded=True):
       st.write(item['answer'])
       st.caption('Topic: '+item['category']+' · Source: '+item['source'])
    else:
-    st.info('No close match in the current library. Try describing the plant, growing condition or symptom, or browse the general plant-care references below.')
+    st.info('No close general reference was found. Try describing the growing condition or symptom, or browse the general plant-care library below.')
  st.subheader('Knowledge library')
  visible_items = [item for item in KNOWLEDGE if category=='All' or item['category']==category]
  st.caption(f'{len(visible_items)} curated entries available')
