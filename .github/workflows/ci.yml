@@ -28,6 +28,8 @@ jobs:
           python - <<'PY'
           from modules.reporting import build_farm_report_csv, build_farm_report_pdf
           from modules.agronomy import assess_soil
+          import pandas as pd
+          from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -53,5 +55,19 @@ jobs:
           soil_ph_only = assess_soil(6.8, None, None, None, None, None, "Maize")
           assert any(label == "Soil reaction" for label, _ in soil_ph_only)
           assert not any(label == "Organic matter" for label, _ in soil_ph_only)
-          print("PDF/CSV exports and missing-soil-measurement checks passed.")
+          lab_input = pd.DataFrame({
+              "Sample": ["A", "B", "C"],
+              "Depth_cm": [0, 15, 30],
+              "pH_lab": [6.5, 7.2, 18],
+              "OM_pct": [2.1, None, 1.4],
+          })
+          lab_clean, lab_check = normalize_soil_lab_data(
+              lab_input,
+              {"sample_id": "Sample", "depth_cm": "Depth_cm", "soil_ph": "pH_lab", "organic_matter_pct": "OM_pct"},
+          )
+          assert lab_check["rows_uploaded"] == 3
+          assert lab_check["rows_with_measurements"] == 3
+          assert pd.isna(lab_clean.loc[2, "soil_ph"])
+          assert len(soil_lab_summary(lab_clean)) == 2
+          print("PDF/CSV exports, soil missingness and lab-import checks passed.")
           PY
