@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import folium
+from streamlit_folium import st_folium
 from modules.data_sources import get_weather, get_historical_climate, search_global_locations, DATA_SOURCES
 from modules.agronomy import CROPS, get_crop_guidance, assess_soil, screen_crop_symptoms, search_knowledge, KNOWLEDGE
 
@@ -151,6 +153,27 @@ elif page=='Crop Planner':
  st.markdown('<div class="hero"><h1>🌾 Crop Planning</h1><p>Build a crop-specific planning record using the actual farm location and cultivar.</p></div>',unsafe_allow_html=True)
  st.info('Farm location and crop variety are required. Recommendations must be supported by crop- and location-specific evidence; unsupported values are not guessed.')
  region = global_location_picker("planner", "Search and select the farm location (required)")
+ map_point = st.session_state.get("planner_map_point")
+ if region:
+  st.subheader("Pin the farm on the map")
+  st.caption("Click the farm's position on the map. The pin coordinates can be used for more localized weather data.")
+  map_center = [map_point["latitude"], map_point["longitude"]] if map_point else [region["latitude"], region["longitude"]]
+  farm_map = folium.Map(location=map_center, zoom_start=13 if map_point else 7, control_scale=True)
+  folium.Marker([region["latitude"], region["longitude"]], tooltip="Selected search location", icon=folium.Icon(color="blue", icon="info-sign")).add_to(farm_map)
+  if map_point:
+   folium.Marker([map_point["latitude"], map_point["longitude"]], tooltip="Selected farm point", icon=folium.Icon(color="green", icon="leaf")).add_to(farm_map)
+  map_result = st_folium(farm_map, height=380, width=None, key="planner_farm_map", returned_objects=["last_clicked"])
+  if map_result and map_result.get("last_clicked"):
+   clicked = map_result["last_clicked"]
+   new_point = {"latitude": float(clicked["lat"]), "longitude": float(clicked["lng"])}
+   if new_point != map_point:
+    st.session_state["planner_map_point"] = new_point
+    st.rerun()
+  if map_point:
+   st.success(f"Farm pin selected: {map_point['latitude']:.5f}°, {map_point['longitude']:.5f}°")
+   if st.button("Clear farm map pin", key="clear_planner_map_pin"):
+    st.session_state.pop("planner_map_point", None)
+    st.rerun()
  with st.form('crop_planner'):
   a,b=st.columns(2)
   with a:
@@ -162,15 +185,15 @@ elif page=='Crop Planner':
    system=st.selectbox('Production system',['Rainfed','Irrigated','Rainfed and supplementary irrigation','Protected cultivation','Not sure'])
    soil_ph=st.number_input('Soil pH (optional; enter 0 if not tested)',min_value=0.0,max_value=14.0,value=0.0,step=.1)
   st.markdown('**Optional: use exact farm coordinates**')
-  use_farm_coordinates=st.checkbox('I know the farm latitude and longitude')
-  default_lat=float(region['latitude']) if region else 0.0
-  default_lon=float(region['longitude']) if region else 0.0
+  use_farm_coordinates=st.checkbox('Use exact farm coordinates',value=bool(map_point))
+  default_lat=float(map_point['latitude']) if map_point else (float(region['latitude']) if region else 0.0)
+  default_lon=float(map_point['longitude']) if map_point else (float(region['longitude']) if region else 0.0)
   coord1,coord2=st.columns(2)
   with coord1:
    farm_lat=st.number_input('Farm latitude',min_value=-90.0,max_value=90.0,value=default_lat,step=0.0001,format='%.5f',disabled=not use_farm_coordinates)
   with coord2:
    farm_lon=st.number_input('Farm longitude',min_value=-180.0,max_value=180.0,value=default_lon,step=0.0001,format='%.5f',disabled=not use_farm_coordinates)
-  st.caption('Exact coordinates improve local weather matching. You can obtain them from a GPS device or a map app.')
+  st.caption('Map-selected coordinates are prefilled automatically. You can adjust them manually or enter coordinates from a GPS device.')
   submitted=st.form_submit_button('Build crop planning profile',use_container_width=True)
  if submitted:
   if not region:
