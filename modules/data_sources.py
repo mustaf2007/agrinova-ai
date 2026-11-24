@@ -5,7 +5,7 @@ import streamlit as st
 from datetime import date, timedelta
 
 TIMEOUT = 20
-DATA_SOURCES = [
+DATA_SOURCES = [\n    {"Category":"Crop calendars and agronomic practices","Provider":"FAO Crop Calendar","Coverage":"100+ crops in 50+ countries; agroecological-zone detail where available","Access":"Public searchable platform; coverage varies by country and crop","URL":"https://cropcalendar.apps.fao.org/"},\n    {"Category":"Crop ecological requirements","Provider":"FAO ECOCROP / GAEZ","Coverage":"Ecological characteristics for approximately 2,568 plant species","Access":"Public database through GAEZ; records vary in detail","URL":"https://gaez.fao.org/pages/ecocrop"},\n    {"Category":"Irrigated crop calendars","Provider":"FAO AQUASTAT","Coverage":"Country-level irrigated crop calendar records for selected crops and years","Access":"Public database; coverage and reference years vary","URL":"https://www.fao.org/aquastat/en/databases/crop-calendar/"},
     {"Category":"Weather forecasts","Provider":"Open-Meteo","Coverage":"Global; location-level forecasts","Access":"Free access; no API key for eligible non-commercial use; check terms","URL":"https://open-meteo.com/"},
     {"Category":"Historical climate","Provider":"NASA POWER","Coverage":"Global gridded / point data","Access":"Public access; check dataset terms","URL":"https://power.larc.nasa.gov/"},
     {"Category":"Agriculture statistics","Provider":"FAOSTAT","Coverage":"Country and global statistics; varies by indicator","Access":"Public data; check individual dataset terms","URL":"https://www.fao.org/faostat/"},
