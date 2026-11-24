@@ -42,7 +42,7 @@ def _rows(report):
         ("ECOCROP reference ID", report.get("ecocrop_record_id", "Not available")),
     ]
     rows.extend(report.get("ecocrop_indicators", []))
-    return rows
+    return [(label, "Not available" if value is None else value) for label, value in rows]
 
 
 def build_farm_report_csv(report):
