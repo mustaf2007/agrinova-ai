@@ -31,6 +31,7 @@ jobs:
           import pandas as pd
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
           from modules.crop_suitability import assess_crop_environment
+          from modules.crop_suitability import normalize_spatial_observations
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -78,5 +79,17 @@ jobs:
           assert crop_checks[1]["Comparison"] == "Within reference range"
           missing_checks = assess_crop_environment({"topmn": None, "topmx": None}, None, None)
           assert all(row["Comparison"] == "Not assessed" for row in missing_checks)
+          spatial_input = pd.DataFrame({
+              "lat": [2.04, 95, None],
+              "lon": [45.3, 45.0, 40.0],
+              "temp": [27.0, 25.0, 26.0],
+              "ph": [6.5, 7.0, 6.0],
+          })
+          spatial_clean, spatial_warnings = normalize_spatial_observations(
+              spatial_input, "lat", "lon", "temp", "ph"
+          )
+          assert len(spatial_clean) == 1
+          assert spatial_clean.loc[0, "latitude"] == 2.04
+          assert len(spatial_warnings) == 1
           print("PDF/CSV exports, soil missingness and lab-import checks passed.")
           PY
