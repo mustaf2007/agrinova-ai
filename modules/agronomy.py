@@ -56,6 +56,21 @@ for _crop_name, _guidance_items in CROP_GUIDANCE.items():
         "answer": " ".join(_guidance_items),
         "source": "AgriNova AI built-in crop guidance; confirm recommendations with local agricultural extension services.",
     })
+# Broad plant-care references apply across plant types. They are not
+# species-specific prescriptions and should be adapted to local conditions.
+GENERAL_PLANT_KNOWLEDGE = [
+    {"title":"General care principles for any plant","category":"General plant guidance","answer":"Start by identifying the plant as accurately as possible and recording its growing location, growth stage and growing conditions. Observe light exposure, soil or growing medium, drainage, temperature and recent weather. Change one management factor at a time and monitor the response. Requirements differ between species and varieties, so avoid applying a recommendation intended for another plant.","source":"AgriNova AI general plant-care reference; confirm species-specific decisions with local horticultural or agricultural extension services."},
+    {"title":"Watering plants and managing moisture","category":"General plant guidance","answer":"Check moisture in the active root zone before watering rather than following a fixed schedule. Water needs vary with plant species, growth stage, container or field conditions, soil texture, temperature, wind and rainfall. Ensure containers and fields drain appropriately; both drought and waterlogging can cause wilting or yellowing. Avoid wetting foliage unnecessarily where leaf diseases are a concern.","source":"General horticultural and agronomic practice; determine crop- and site-specific needs locally."},
+    {"title":"Light, shade and plant growth","category":"General plant guidance","answer":"Observe how much direct and indirect light the plant receives through the day. Light requirements vary widely: some plants tolerate shade while others need full sun. Sudden changes in exposure can cause stress. Compare the plant's condition in relation to its species, growth stage and local climate before changing its position or providing shade.","source":"General horticultural practice; species-specific light requirements must be verified."},
+    {"title":"Soil, growing media and drainage for plants","category":"General plant guidance","answer":"Assess soil texture, structure, drainage, salinity risk and rooting depth before changing the growing medium. Maintain suitable soil cover and add mature organic material where appropriate. Avoid working very wet soil and do not assume that one soil amendment is suitable for every plant. A laboratory soil test can help guide pH and nutrient decisions.","source":"General soil-management practice; use laboratory results and local extension interpretation for amendments."},
+    {"title":"Plant nutrition and fertilizer safety","category":"General plant guidance","answer":"Do not choose fertilizer rates from plant appearance alone. Nutrient needs depend on species, variety, growth stage, soil or growing medium, irrigation water and production system. Yellowing and poor growth can also result from root damage, water stress, salinity, pests or disease. Use soil or plant-tissue testing where available, follow locally approved product labels and avoid excessive applications.","source":"General nutrient-management principles; fertilizer rates require crop- and site-specific evidence."},
+    {"title":"Monitoring pests on any plant","category":"General plant guidance","answer":"Inspect plants regularly, including new growth and the upper and lower leaf surfaces. Record the affected plant parts, number of plants affected, distribution, pest signs and how symptoms change over time. Use physical, cultural and biological controls where suitable. Identify the pest before considering a pesticide, and use only locally registered products according to their labels.","source":"Integrated pest management principles; confirm pest identity and local pesticide registration."},
+    {"title":"Diagnosing plant diseases and unusual symptoms","category":"General plant guidance","answer":"A single symptom rarely confirms a plant disease. Record the plant identity, variety if known, location, growth stage, symptom onset, affected parts, distribution and recent weather or watering. Photograph the whole plant and close-ups of affected and healthy tissue. Consider pests, nutrient disorders, water stress, salinity and chemical injury as well as infectious diseases. Seek laboratory or extension diagnosis before treatment.","source":"General plant-health diagnostic practice; diagnosis requires adequate field evidence."},
+    {"title":"Pruning, handling and plant hygiene","category":"General plant guidance","answer":"Use clean, sharp tools and avoid unnecessary injury. Remove damaged or diseased material only when the plant type and condition justify it; dispose of potentially infected material safely. Pruning timing and technique differ greatly among trees, shrubs, vegetables and ornamental plants, so verify species-specific guidance before major pruning.","source":"General horticultural practice; pruning timing and methods are species-dependent."},
+    {"title":"Starting a new or unfamiliar plant","category":"General plant guidance","answer":"Before planting or propagating an unfamiliar plant, confirm its identity, intended use and whether it is invasive or toxic in the local area. Check that planting material is healthy and suitable for the climate and production system. Verify propagation method, spacing, planting depth and seasonal timing with a reliable species-specific source rather than guessing.","source":"General plant establishment guidance; verify identity, safety and local suitability."},
+]
+KNOWLEDGE.extend(GENERAL_PLANT_KNOWLEDGE)
+
 
 
 def get_crop_guidance(crop, region, season, farm_size):
@@ -151,61 +166,82 @@ def screen_crop_symptoms(crop, symptoms, plant_part, conditions):
     return {"likely_issue":likely,"explanation":explanation,"actions":actions}
 
 def search_knowledge(query, category="All", limit=5):
-    """Search curated articles and built-in crop guidance with a safe fallback."""
+    """Search general plant-care references and crop-specific articles safely."""
     if not isinstance(query, str) or not query.strip():
         return []
     if not isinstance(limit, int) or limit < 1:
-        return []
-    candidates = [
-        item for item in KNOWLEDGE
-        if category == "All" or item.get("category") == category
-    ]
-    if not candidates:
         return []
 
     normalized_query = " ".join(re.findall(r"[a-zA-Z0-9]+", query.lower()))
     if not normalized_query:
         return []
+    query_tokens = set(normalized_query.split())
+    stop_words = {"about", "what", "how", "when", "where", "why", "the", "and", "for", "please", "tell", "me", "can", "you", "does", "is", "are"}
+    meaningful_tokens = {token for token in query_tokens if token not in stop_words}
+    if not meaningful_tokens:
+        return []
+
+    crop_aliases = {
+        "maize": {"maize", "corn"}, "sorghum": {"sorghum"},
+        "sesame": {"sesame"}, "cowpea": {"cowpea", "blackeyed", "black-eyed"},
+        "banana": {"banana", "plantain"}, "tomato": {"tomato"},
+        "onion": {"onion"}, "watermelon": {"watermelon"},
+        "groundnut": {"groundnut", "peanut"}, "rice": {"rice"},
+    }
+    matched_crops = {
+        crop for crop, aliases in crop_aliases.items()
+        if meaningful_tokens & aliases
+    }
+
+    candidates = [
+        item for item in KNOWLEDGE
+        if category == "All" or item.get("category") == category
+    ]
+    if not matched_crops:
+        candidates = [
+            item for item in candidates
+            if item.get("category") != "Crop-specific guidance"
+        ]
+    else:
+        candidates = [
+            item for item in candidates
+            if item.get("category") != "Crop-specific guidance"
+            or any(crop in item.get("title", "").lower() for crop in matched_crops)
+        ]
+    if not candidates:
+        return []
+
     documents = [
-        " ".join([
-            item.get("title", ""),
-            item.get("category", ""),
-            item.get("answer", ""),
-        ])
+        " ".join([item.get("title", ""), item.get("category", ""), item.get("answer", "")])
         for item in candidates
     ]
     try:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
-
-        vectorizer = TfidfVectorizer(
-            stop_words="english",
-            ngram_range=(1, 2),
-            strip_accents="unicode",
-        )
+        vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), strip_accents="unicode")
         matrix = vectorizer.fit_transform(documents + [normalized_query])
         scores = cosine_similarity(matrix[-1], matrix[:-1]).ravel()
-        ranked = sorted(
-            zip(scores, candidates),
-            key=lambda pair: pair[0],
-            reverse=True,
-        )
-        return [item for score, item in ranked if score > 0][:limit]
+        ranked = sorted(zip(scores, candidates), key=lambda pair: pair[0], reverse=True)
+        matches = [item for score, item in ranked if score > 0][:limit]
     except (ImportError, ValueError):
-        # Lightweight token-overlap fallback if scikit-learn is unavailable
-        # or the indexed text has no usable vocabulary.
-        stop_words = {"about", "what", "how", "when", "where", "why", "the", "and", "for"}
-        tokens = {
-            token for token in re.findall(r"[a-zA-Z0-9]+", normalized_query)
-            if len(token) > 1 and token not in stop_words
-        }
-        if not tokens:
-            return []
         ranked = []
         for item, document in zip(candidates, documents):
             words = set(re.findall(r"[a-zA-Z0-9]+", document.lower()))
-            score = len(tokens & words) / len(tokens)
+            score = len(meaningful_tokens & words) / len(meaningful_tokens)
             if score > 0:
                 ranked.append((score, item))
         ranked.sort(key=lambda pair: pair[0], reverse=True)
-        return [item for _, item in ranked[:limit]]
+        matches = [item for _, item in ranked[:limit]]
+
+    plant_intent = bool(
+        query_tokens & {"plant", "plants", "crop", "crops", "vegetable", "vegetables",
+                        "fruit", "fruits", "tree", "trees", "herb", "herbs", "flower",
+                        "flowers", "ornamental", "seedling", "seedlings", "garden"}
+        or re.match(r"^(about|for|care for)\\s+", normalized_query)
+    )
+    if not matches and plant_intent and (category == "All" or category == "General plant guidance"):
+        matches = [
+            item for item in KNOWLEDGE
+            if item.get("category") == "General plant guidance"
+        ][:limit]
+    return matches
