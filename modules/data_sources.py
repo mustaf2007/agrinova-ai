@@ -7,6 +7,7 @@ from datetime import date, timedelta
 
 TIMEOUT = 20
 DATA_SOURCES = [
+    {"Category":"African crop calendars","Provider":"World Bank Data Catalog / JRC-ASAP (based on FAO calendars)","Coverage":"Sorghum, millet, barley, maize and wheat; national and subnational records for most African countries; dataset temporal coverage 2019","Access":"Public CSV, CC BY 4.0; coverage is conditional on matching original calendars with satellite-derived phenology","URL":"https://datacatalog.worldbank.org/search/dataset/0066842/crop-calendar-for-africa"},
     {"Category":"Crop calendars and agronomic practices","Provider":"FAO Crop Calendar","Coverage":"100+ crops in 50+ countries; agroecological-zone detail where available","Access":"Public searchable platform; coverage varies by country and crop","URL":"https://cropcalendar.apps.fao.org/"},
     {"Category":"Crop ecological requirements","Provider":"FAO ECOCROP / GAEZ","Coverage":"Ecological characteristics for approximately 2,568 plant species","Access":"Public database through GAEZ; records vary in detail","URL":"https://gaez.fao.org/pages/ecocrop"},
     {"Category":"Crop ecological requirements dataset","Provider":"FAO ECOCROP via CGIAR Climate Action Data Hub","Coverage":"2,568 species; ecological thresholds and crop-cycle descriptors; species-level, not cultivar-specific","Access":"Public CC BY 4.0 dataset; expert estimates with known gaps and limitations","URL":"https://cgiar-climate-data-hub.github.io/catalog/ecocrop/"},
