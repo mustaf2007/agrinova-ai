@@ -32,6 +32,7 @@ jobs:
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
           from modules.crop_suitability import assess_crop_environment
           from modules.crop_suitability import normalize_spatial_observations, validate_geojson_boundaries
+          from modules.soilgrids_wcs import parse_wcs_coverages
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -116,5 +117,29 @@ jobs:
           partial, partial_warnings, _ = validate_geojson_boundaries(mixed)
           assert partial is not None and len(partial["features"]) == 1
           assert len(partial_warnings) == 1
+          capabilities_xml = """<?xml version="1.0"?>
+          <Capabilities xmlns="http://www.opengis.net/wcs/2.0">
+            <Contents>
+              <CoverageSummary><CoverageId>nitrogen_0-5cm_Q0.5</CoverageId></CoverageSummary>
+              <CoverageSummary><CoverageId>nitrogen_5-15cm_Q0.5</CoverageId></CoverageSummary>
+              <CoverageSummary><CoverageId>nitrogen_15-30cm_Q0.5</CoverageId></CoverageSummary>
+            </Contents>
+          </Capabilities>"""
+          coverages = parse_wcs_coverages(capabilities_xml)
+          assert coverages == [
+              "nitrogen_0-5cm_Q0.5",
+              "nitrogen_5-15cm_Q0.5",
+              "nitrogen_15-30cm_Q0.5",
+          ]
+          try:
+              parse_wcs_coverages("<not-valid-xml")
+              raise AssertionError("Malformed XML should be rejected.")
+          except ValueError:
+              pass
+          try:
+              parse_wcs_coverages("<Capabilities />")
+              raise AssertionError("Capabilities without identifiers should be rejected.")
+          except ValueError:
+              pass
           print("PDF/CSV exports, soil missingness and lab-import checks passed.")
           PY
