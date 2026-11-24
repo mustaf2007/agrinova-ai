@@ -27,6 +27,7 @@ jobs:
         run: |
           python - <<'PY'
           from modules.reporting import build_farm_report_csv, build_farm_report_pdf
+          from modules.data_sources import normalize_ecocrop_name
           from modules.agronomy import assess_soil, search_knowledge, KNOWLEDGE
           import pandas as pd
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
@@ -54,6 +55,9 @@ jobs:
           assert b"2026-11-10" in csv_data
           assert pdf_data.startswith(b"%PDF-")
           assert len(pdf_data) > 1000
+          assert normalize_ecocrop_name("egg plant") == normalize_ecocrop_name("Eggplant")
+          assert normalize_ecocrop_name("dragon-fruit") == normalize_ecocrop_name("dragon fruit")
+          assert normalize_ecocrop_name("Mango tree") == "mangotree"
           sorghum_results = search_knowledge("about sorghum")
           assert sorghum_results
           assert any("Sorghum" in item["title"] for item in sorghum_results)
