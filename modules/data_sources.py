@@ -136,13 +136,16 @@ def load_ecocrop_database():
     try:
         response = requests.get(ECOCROP_PARQUET_URL, timeout=TIMEOUT)
         response.raise_for_status()
-        frame = pd.read_parquet(io.BytesIO(response.content), columns=ECOCROP_FIELDS)
-        return frame
+        frame = pd.read_parquet(io.BytesIO(response.content))
+        available_fields = [field for field in ECOCROP_FIELDS if field in frame.columns]
+        return frame[available_fields]
     except (requests.RequestException, ValueError, ImportError, OSError, KeyError):
         return None
 
 def _ecocrop_text(value):
     if value is None:
+        return ""
+    if isinstance(value, float) and pd.isna(value):
         return ""
     if isinstance(value, (list, tuple, set)):
         return ", ".join(str(part) for part in value if part is not None)
