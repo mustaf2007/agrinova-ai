@@ -84,7 +84,7 @@ elif page=='Weather & Climate':
   with c: metric('Wind',f"{w['wind']} km/h")
   with d: metric('7-day rain',f"{w['rain_7d']} mm")
   df=pd.DataFrame(w['daily']); st.plotly_chart(px.line(df,x='date',y=['temp_max','temp_min'],markers=True),use_container_width=True); st.plotly_chart(px.bar(df,x='date',y='precipitation'),use_container_width=True)
-  st.subheader('NASA POWER historical climate'); hist=get_historical_climate(lat,lon)
+  st.subheader('NASA POWER historical climate'); hist=get_historical_climate(loc["latitude"],loc["longitude"])
   if hist is not None and not hist.empty: st.line_chart(hist.set_index('date')[['T2M','PRECTOTCORR']]); st.dataframe(hist.tail(30),use_container_width=True)
   else: st.info('Historical data not currently returned by NASA POWER.')
  else: st.info('Worldwide mode is active. Search a city, region or country above to load its forecast. If you already selected a location, check internet connectivity.')
