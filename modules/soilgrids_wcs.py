@@ -144,7 +144,6 @@ def analyze_nitrogen_geotiff(
     counts, raster metadata, and an exact-polygon-clipped GeoTIFF. This is a
     summary of modeled SoilGrids pixels, not a laboratory measurement.
     """
-    import io
     import numpy as np
     import rasterio
     from rasterio.mask import mask
@@ -192,7 +191,6 @@ def analyze_nitrogen_geotiff(
                 raw = np.asarray(clipped.data)
                 masked = np.ma.getmaskarray(clipped) | ~np.isfinite(raw)
                 values = raw[~masked].astype("float64")
-                inside_pixels = int(clipped.size - np.count_nonzero(np.ma.getmaskarray(clipped) & ~np.isfinite(raw))) if False else int(np.count_nonzero(~np.ma.getmaskarray(clipped)))
                 # Count polygon-selected pixels separately from valid raster cells.
                 from rasterio.mask import raster_geometry_mask
                 shape_mask, _, _ = raster_geometry_mask(
@@ -216,7 +214,6 @@ def analyze_nitrogen_geotiff(
                     compress="deflate",
                     nodata=dataset.nodata if dataset.nodata is not None else -32768,
                 )
-                output = io.BytesIO()
                 export_array = np.ma.array(clipped, mask=np.ma.getmaskarray(clipped) | shape_mask)
                 with rasterio.io.MemoryFile() as output_memory:
                     with output_memory.open(**profile) as writer:
