@@ -30,6 +30,7 @@ jobs:
           from modules.agronomy import assess_soil
           import pandas as pd
           from modules.soil_lab import normalize_soil_lab_data, soil_lab_summary, soil_lab_group_summary
+          from modules.crop_suitability import assess_crop_environment
 
           sample = {
               "location": "Mogadishu, Somalia",
@@ -72,5 +73,10 @@ jobs:
           grouped_lab = soil_lab_group_summary(lab_clean, "depth_cm")
           assert len(grouped_lab) == 3
           assert "Soil pH median" in grouped_lab.columns
+          crop_checks = assess_crop_environment({"topmn": 18, "topmx": 30, "phmin": 5.0, "phmax": 8.0}, 27.0, 6.5)
+          assert crop_checks[0]["Comparison"] == "Within reference range"
+          assert crop_checks[1]["Comparison"] == "Within reference range"
+          missing_checks = assess_crop_environment({"topmn": None, "topmx": None}, None, None)
+          assert all(row["Comparison"] == "Not assessed" for row in missing_checks)
           print("PDF/CSV exports, soil missingness and lab-import checks passed.")
           PY
