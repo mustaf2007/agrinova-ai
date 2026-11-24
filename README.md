@@ -10,7 +10,8 @@ AgriNova AI is a Streamlit application designed for worldwide use. Its default e
 - Six dashboard themes: Emerald, Forest, Ocean, Sunrise, Dark and Lavender
 - Open-Meteo weather forecasts
 - NASA POWER historical climate lookup
-- Crop planning and general agronomic guidance
+- Crop planning for built-in crops plus free-text entry for any additional crop or plant (including trees, fruits, vegetables, herbs and forage)
+- General crop guidance, with clear species-specific validation notes for custom entries
 - Symptom-based crop health screening
 - User-entered soil indicator interpretation
 - Searchable curated agricultural knowledge using TF-IDF (no external AI API)
