@@ -312,7 +312,9 @@ elif page=='Crop Planner':
       with map2:
        plant_start_col = st.selectbox('Planting start dekad', calendar_cols, index=_calendar_guess(['sos_s','planting_start','plant_start']), key='calendar_plant_start')
        plant_end_col = st.selectbox('Planting end dekad', calendar_cols, index=_calendar_guess(['sos_e','planting_end','plant_end']), key='calendar_plant_end')
+       growth_start_col = st.selectbox('Growth start dekad (optional)', calendar_cols, index=_calendar_guess(['sos_e','growth_start']), key='calendar_growth_start')
        growth_end_col = st.selectbox('Growth end dekad (optional)', calendar_cols, index=_calendar_guess(['eos_s','growth_end']), key='calendar_growth_end')
+       harvest_start_col = st.selectbox('Harvest start dekad (optional)', calendar_cols, index=_calendar_guess(['eos_s','harvest_start']), key='calendar_harvest_start')
        harvest_end_col = st.selectbox('Harvest end dekad (optional)', calendar_cols, index=_calendar_guess(['eos_e','harvest_end']), key='calendar_harvest_end')
       if country_col != '— Not available —' and crop_col != '— Not available —':
        filtered_calendar = calendar_df.copy()
@@ -348,7 +350,7 @@ elif page=='Crop Planner':
          except (TypeError, ValueError):
           return 'Not available / non-numeric'
         calendar_display = filtered_calendar.copy()
-        phase_columns = [('Planting start',plant_start_col),('Planting end',plant_end_col),('Growth end',growth_end_col),('Harvest end',harvest_end_col)]
+        phase_columns = [('Planting start',plant_start_col),('Planting end',plant_end_col),('Growth start',growth_start_col),('Growth end',growth_end_col),('Harvest start',harvest_start_col),('Harvest end',harvest_end_col)]
         for label, col in phase_columns:
          if col != '— Not available —':
           calendar_display[label + ' (approx.)'] = calendar_display[col].map(_dekad_label)
